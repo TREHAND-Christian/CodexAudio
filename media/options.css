@@ -186,17 +186,21 @@ select#voice {
   align-items: center;
   justify-content: center;
   color: var(--vscode-charts-green);
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
 }
 
 .speaker-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 100%;
+  height: 100%;
+  display: block;
   fill: currentColor;
 }
 
 .speaker-icon.small svg {
-  width: 14px;
-  height: 14px;
+  width: 100%;
+  height: 100%;
 }
 
 .speaker-icon.missing {
@@ -212,6 +216,12 @@ select#voice {
   height: 12px;
   line-height: 12px;
   font-size: 12px;
+}
+
+.speaker-icon.small {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
 }
 
 .mono {

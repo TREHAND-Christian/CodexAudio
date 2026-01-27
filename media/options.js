@@ -297,9 +297,9 @@
 
   function voiceAvailability(code, voices) {
     const c = baseLang(code);
-    if (!c) return "unknown";
+    if (!c) return "missing";
     const list = Array.isArray(voices) ? voices : [];
-    if (!list.length) return "unknown";
+    if (!list.length) return "missing";
     const ok = list.some((v) => {
       const langs = Array.isArray(v.languages) ? v.languages : [];
       return langs.some((l) => String(l || "").toLowerCase().startsWith(c));
@@ -309,6 +309,14 @@
 
   function setSpeakerStatus(el, status) {
     if (!el) return;
+    if (!el.classList.contains("speaker-icon")) {
+      el.classList.add("speaker-icon");
+    }
+    if (!el.querySelector("svg")) {
+      el.innerHTML = speakerSvgHtml("small");
+    }
+    el.classList.toggle("missing", status === "missing");
+    el.classList.toggle("unknown", status === "unknown");
     el.classList.toggle("is-missing", status === "missing");
     el.classList.toggle("is-unknown", status === "unknown");
   }
@@ -422,11 +430,21 @@
 
   document.addEventListener("click", () => closeOpenSelect());
 
+  function speakerSvgHtml(size) {
+    const dim = size === "small" ? 14 : 16;
+    return (
+      `<svg aria-hidden="true" viewBox="0 0 24 24" width="${dim}" height="${dim}" focusable="false">` +
+      '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.1-3.8v7.6A4.5 4.5 0 0 0 16.5 12zm2.5 0a7 7 0 0 0-3.5-6.1v12.2A7 7 0 0 0 19 12z"/>' +
+      "</svg>"
+    );
+  }
+
   function createSpeakerIcon(status, size) {
     const wrap = document.createElement("span");
-    wrap.className = `speaker ${size || ""}`.trim();
-    if (status === "missing") wrap.classList.add("is-missing");
-    if (status === "unknown") wrap.classList.add("is-unknown");
+    wrap.className = `speaker-icon ${size || ""}`.trim();
+    if (status === "missing") wrap.classList.add("missing");
+    if (status === "unknown") wrap.classList.add("unknown");
+    wrap.innerHTML = speakerSvgHtml(size);
     return wrap;
   }
 
