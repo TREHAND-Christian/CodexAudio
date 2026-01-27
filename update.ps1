@@ -41,20 +41,7 @@ Copy-Item -Force $VsixPath $fixedPath
 Write-Host "-> Install VSIX: $fixedPath" -ForegroundColor Yellow
 & code --install-extension $fixedPath --force | Out-Null
 
-Write-Host "-> Reload VS Code window (Ctrl+Maj+P)..." -ForegroundColor Yellow
-try {
-  & code . --reuse-window | Out-Null
-  Start-Sleep -Milliseconds 250
-  $wshell = New-Object -ComObject WScript.Shell
-  $null = $wshell.AppActivate("Visual Studio Code")
-  Start-Sleep -Milliseconds 200
-  $wshell.SendKeys("^+p")
-  Start-Sleep -Milliseconds 200
-  $wshell.SendKeys("Developer: Recharger la fenêtre")
-  Start-Sleep -Milliseconds 200
-  $wshell.SendKeys("{ENTER}")
-} catch {
-  Write-Host "Impossible de déclencher le reload automatiquement." -ForegroundColor Yellow
-}
+Write-Host "-> Reload VS Code window..." -ForegroundColor Yellow
+& code . --reuse-window --command workbench.action.reloadWindow | Out-Null
 
 Write-Host "OK." -ForegroundColor Green
