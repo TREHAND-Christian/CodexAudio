@@ -1,0 +1,20 @@
+body {
+  font-family: var(--vscode-font-family);
+  padding: 10px;
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+}
+
+#title {
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.bubble {
+  background: color-mix(in srgb, var(--vscode-editor-background) 94%, #000 6%);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 10px;
+  padding: 10px;
+  white-space: pre-wrap;
+  line-height: 1.45;
+}

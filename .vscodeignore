@@ -1,0 +1,11 @@
+.vscode/**
+.venv/**
+node_modules/**
+src/**
+scripts/**
+*.log
+*.ts
+*.pyc
+**/__pycache__/**
+tsconfig.json
+package-lock.json

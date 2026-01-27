@@ -1,0 +1,109 @@
+{
+  "name": "codexaudio",
+  "displayName": "CodexAudio",
+  "version": "0.0.37",
+  "description": "Lit à voix haute les réponses Codex (sessions .jsonl), avec options et traduction.",
+  "icon": "assets/CAC-logo.png",
+  "main": "./dist/extension.js",
+  "scripts": {
+    "compile": "node ./scripts/build.mjs",
+    "watch": "node ./scripts/build.mjs --watch",
+    "package": "npm run compile && npx @vscode/vsce package --no-dependencies",
+    "vscode:prepublish": "npm run compile"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "publisher": "trehand",
+  "engines": {
+    "vscode": "^1.108.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      {
+        "command": "codexAudio.openOptions",
+        "title": "CodexAudio: Ouvrir Options"
+      },
+      {
+        "command": "codexAudio.openTranslation",
+        "title": "CodexAudio: Ouvrir Traduction"
+      },
+      {
+        "command": "codexAudio.playPause",
+        "title": "CodexAudio: Lecture / Pause"
+      },
+      {
+        "command": "codexAudio.stop",
+        "title": "CodexAudio: Stop"
+      },
+      {
+        "command": "codexAudio.toggleMute",
+        "title": "CodexAudio: Muet"
+      },
+      {
+        "command": "codexAudio.togglePauseService",
+        "title": "CodexAudio: Pause Service"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codexAudio",
+          "title": "CodexAudio",
+          "icon": "assets/CAC-logo.png"
+        }
+      ]
+    },
+    "views": {
+      "codexAudio": [
+        {
+          "id": "codexAudio.options",
+          "name": "Options",
+          "type": "webview",
+          "icon": "assets/conf.svg"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CodexAudio",
+      "properties": {
+        "codexAudio.pythonPath": {
+          "type": "string",
+          "default": "C:\\\\Users\\\\treha\\\\Desktop\\\\CodexAudio\\\\.venv\\\\Scripts\\\\python.exe",
+          "description": "Chemin vers python.exe (venv) utilisé pour TTS/Traduction."
+        },
+        "codexAudio.pollIntervalMs": {
+          "type": "number",
+          "default": 500,
+          "minimum": 100,
+          "description": "Intervalle de polling des sessions Codex (ms)."
+        },
+        "codexAudio.readLastOnStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Au démarrage, lit uniquement la dernière réponse assistant du fichier courant."
+        },
+        "codexAudio.scrubTtsFields": {
+          "type": "boolean",
+          "default": true,
+          "description": "Nettoie les champs TTS dans les JSONL (best-effort)."
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "@types/vscode": "^1.108.1",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.9.3"
+  }
+}
