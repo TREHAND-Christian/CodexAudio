@@ -10,6 +10,7 @@ export type AppState = {
   miniBarVisible: boolean;
   showMiniBarOnStart: boolean;
   showTranslationWindow: boolean;
+  showTranslationOnStart: boolean;
   appPaused: boolean;
   ttsEnabled: boolean;
   ttsMute: boolean;
@@ -32,6 +33,7 @@ export const DEFAULT_STATE: AppState = {
   miniBarVisible: true,
   showMiniBarOnStart: true,
   showTranslationWindow: true,
+  showTranslationOnStart: true,
   appPaused: false,
   ttsEnabled: true,
   ttsMute: false,

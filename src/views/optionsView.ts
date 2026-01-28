@@ -121,7 +121,7 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
       </label>
       <label class="row checkbox">
         <input type="checkbox" id="uiAnnouncements" />
-        <span id="lblUiAnnouncements">Annonces audio de l'interface (coupe la lecture)</span>
+        <span id="lblUiAnnouncements">Annonces audio de l'interface</span>
       </label>
       <label class="row checkbox">
         <input type="checkbox" id="barTop" />
@@ -135,20 +135,24 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
 
     <div class="group">
       <div class="groupTitle" id="grpTextTitle">Fenêtre texte</div>
-      <label class="row checkbox">
-        <input type="checkbox" id="showText" />
-        <span id="lblShowText">Afficher la fenêtre texte</span>
-      </label>
-      <label class="row checkbox">
-        <input type="checkbox" id="translate" />
-        <span id="lblTranslate">Traduire si nécessaire (googletrans)</span>
-      </label>
       <label class="row">
         <span class="label">
           <span id="targetLangSpeaker" class="speaker-icon small" aria-hidden="true">${speakerSvg}</span>
           <span id="lblTarget">Langue cible :</span>
         </span>
         <div id="targetLangSelect" class="select"></div>
+      </label>
+      <label class="row checkbox">
+        <input type="checkbox" id="showText" />
+        <span id="lblShowText">Afficher la fenêtre texte</span>
+      </label>
+      <label class="row checkbox">
+        <input type="checkbox" id="showTextStart" />
+        <span id="lblShowTextStart">Afficher la fenêtre texte au démarrage</span>
+      </label>
+      <label class="row checkbox">
+        <input type="checkbox" id="translate" />
+        <span id="lblTranslate">Traduire si nécessaire (googletrans)</span>
       </label>
     </div>
   </div>

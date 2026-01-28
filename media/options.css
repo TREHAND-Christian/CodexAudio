@@ -26,6 +26,11 @@ body {
   gap: 12px;
 }
 
+#app.app-paused {
+  opacity: 0.6;
+  filter: grayscale(0.55);
+}
+
 .header {
   display: flex;
   align-items: center;
@@ -146,6 +151,13 @@ select#voice {
   border: 1px solid var(--vscode-dropdown-border);
   border-radius: var(--ca-radius-sm);
   padding: 6px 8px;
+}
+
+select#voice.is-muted,
+select#voice.is-muted:disabled {
+  color: var(--vscode-charts-red);
+  border-color: color-mix(in srgb, var(--vscode-charts-red) 65%, var(--vscode-dropdown-border) 35%);
+  opacity: 1;
 }
 
 input[type="range"] {

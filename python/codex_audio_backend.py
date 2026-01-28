@@ -171,6 +171,11 @@ def _normalize_tts_text(text: str) -> str:
     s = re.sub(r"```.*?```", " ", s, flags=re.S)
     s = re.sub(r"`([^`\n]+)`", r"\1", s)
     s = re.sub(r"<[^>]+>", " ", s)
+    # Strip Markdown emphasis markers for TTS only.
+    s = re.sub(r"\*\*(.+?)\*\*", r"\1", s)
+    s = re.sub(r"__(.+?)__", r"\1", s)
+    s = re.sub(r"(?<!\w)\*(?!\s)(.+?)(?<!\s)\*(?!\w)", r"\1", s)
+    s = re.sub(r"(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)", r"\1", s)
     # Replace file paths with basename so spoken text aligns with UI (file links show only filenames).
     try:
         path_re = re.compile(
@@ -750,7 +755,7 @@ class _ChatWebPage(QWebEnginePage if QWebEnginePage is not None else object):
 
 
 class TranslationWindow(QWidget):
-    def __init__(self, on_ui_cmd=None):
+    def __init__(self, on_ui_cmd=None, on_focus=None):
         super().__init__()
         self.setWindowTitle("Fenêtre texte")
         self.setWindowFlag(Qt.Tool, True)
@@ -766,6 +771,7 @@ class TranslationWindow(QWidget):
         self._queue: list[str] = []
         self._web_ready = False
         self._on_ui_cmd = on_ui_cmd
+        self._on_focus = on_focus
 
         if QWebEngineView is not None:
             self.browser = QWebEngineView()
@@ -794,6 +800,39 @@ class TranslationWindow(QWidget):
 
         layout.addWidget(self.browser)
         self._restore_window_state()
+
+    def ensure_on_top(self) -> None:
+        try:
+            self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+            self.show()
+            self.raise_()
+            self.activateWindow()
+        except Exception:
+            pass
+
+    def _notify_focus(self) -> None:
+        if not self._on_focus:
+            return
+        try:
+            self._on_focus()
+        except Exception:
+            pass
+
+    def set_focus_callback(self, on_focus) -> None:
+        self._on_focus = on_focus
+
+    def focusInEvent(self, event) -> None:  # type: ignore[override]
+        self._notify_focus()
+        super().focusInEvent(event)
+
+    def changeEvent(self, event) -> None:  # type: ignore[override]
+        if QEvent is not None and event.type() == QEvent.ActivationChange:
+            try:
+                if self.isActiveWindow():
+                    self._notify_focus()
+            except Exception:
+                pass
+        super().changeEvent(event)
 
     def _on_textbrowser_anchor_clicked(self, url) -> None:
         try:
@@ -864,6 +903,7 @@ class TranslationWindow(QWidget):
         super().resizeEvent(event)
 
     def showEvent(self, event) -> None:  # type: ignore[override]
+        self.ensure_on_top()
         try:
             _update_window_state("translation", {"visible": True})
         except Exception:
@@ -1361,6 +1401,15 @@ class MiniBar(QWidget):
         self.btn_text.clicked.connect(lambda: self._on_ui_cmd("openTranslation"))
         self._restore_window_state()
 
+    def ensure_on_top(self) -> None:
+        try:
+            self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+            self.show()
+            self.raise_()
+            self.activateWindow()
+        except Exception:
+            pass
+
     def set_draggable(self, enabled: bool) -> None:
         self._drag_enabled = bool(enabled)
 
@@ -1441,6 +1490,7 @@ class MiniBar(QWidget):
         super().mouseReleaseEvent(event)
 
     def showEvent(self, event) -> None:  # type: ignore[override]
+        self.ensure_on_top()
         try:
             self._save_window_state()
         except Exception:
@@ -1525,12 +1575,15 @@ def main() -> int:
     tts = TTSEngine()
     proc = Processor(tts)
 
-    translation = TranslationWindow(on_ui_cmd=on_ui_cmd2)
-    translation.hide()
-
     minibar = MiniBar(on_ui_cmd)
     # Start hidden to avoid a brief "flash" on launch before VS Code sends the desired visibility state.
     minibar.hide()
+
+    translation = TranslationWindow(
+        on_ui_cmd=on_ui_cmd2,
+        on_focus=lambda: minibar.ensure_on_top() if minibar.isVisible() else None,
+    )
+    translation.hide()
 
     # No UI callbacks (highlighting removed).
 
@@ -1638,7 +1691,7 @@ def main() -> int:
                 show = bool(params.get("show") is True)
                 if show:
                     translation.show()
-                    translation.raise_()
+                    translation.ensure_on_top()
                 else:
                     translation.hide()
                 _response(req_id, True, {"ok": True})
@@ -1648,7 +1701,7 @@ def main() -> int:
                 show = bool(params.get("show") is True)
                 if show:
                     minibar.show()
-                    minibar.raise_()
+                    minibar.ensure_on_top()
                 else:
                     minibar.hide()
                 _response(req_id, True, {"ok": True})

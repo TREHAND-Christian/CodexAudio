@@ -67,30 +67,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (beforeVoice !== runtime.state.ttsVoiceId) {
       await saveState(context, runtime.state);
     }
-  }
-  if (runtime.backendOk) {
-    try {
-      if (runtime.state.lastDisplayText && runtime.state.lastDisplayText.trim()) {
-        const q =
-          Array.isArray(runtime.state.lastQueue) && runtime.state.lastQueue.length
-            ? runtime.state.lastQueue
-            : [runtime.state.lastDisplayText];
-        await backend.request("set_translation", {
-          label: runtime.state.lastTranslationLabel || runtime.state.targetLang,
-          text: runtime.state.lastDisplayText,
-          queue: q,
-        });
-      }
-      await backend.request("show_minibar", { show: runtime.state.showMiniBarOnStart && runtime.state.miniBarVisible });
-      await backend.request("show_translation", { show: runtime.state.showTranslationWindow });
-      await backend.request("update_state", {
-        app_paused: runtime.state.appPaused,
-        muted: runtime.state.ttsMute,
-        playing: runtime.isSpeaking && !runtime.isPaused,
-      });
-    } catch {
-      // ignore
-    }
+    await syncBackendWindows();
   }
   refreshUi();
 
@@ -178,6 +155,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           muted: runtime.state.ttsMute,
           playing: runtime.isSpeaking && !runtime.isPaused,
         });
+        await backend.request("show_translation", { show: shouldShowTranslation(false) });
+        await backend.request("show_minibar", { show: shouldShowMiniBar(false) });
       }
       await persistAndRefresh();
     }),
@@ -201,6 +180,44 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     runtime.backendOk = false;
     await startBackend();
     if (runtime.backendOk) await refreshBackendInfo();
+  }
+
+  async function syncBackendWindows(): Promise<void> {
+    if (!runtime.backendOk) return;
+    if (runtime.state.lastDisplayText && runtime.state.lastDisplayText.trim()) {
+      const q =
+        Array.isArray(runtime.state.lastQueue) && runtime.state.lastQueue.length
+          ? runtime.state.lastQueue
+          : [runtime.state.lastDisplayText];
+      try {
+        await backend.request("set_translation", {
+          label: runtime.state.lastTranslationLabel || runtime.state.targetLang,
+          text: runtime.state.lastDisplayText,
+          queue: q,
+        });
+      } catch {
+        // ignore
+      }
+    }
+    try {
+      await backend.request("show_minibar", { show: shouldShowMiniBar(true) });
+    } catch {
+      // ignore
+    }
+    try {
+      await backend.request("show_translation", { show: shouldShowTranslation(true) });
+    } catch {
+      // ignore
+    }
+    try {
+      await backend.request("update_state", {
+        app_paused: runtime.state.appPaused,
+        muted: runtime.state.ttsMute,
+        playing: runtime.isSpeaking && !runtime.isPaused,
+      });
+    } catch {
+      // ignore
+    }
   }
 
   async function refreshBackendInfo(): Promise<void> {
@@ -312,6 +329,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     if (evt.type === "log") {
+      if (evt.message === "backend_ready") {
+        void syncBackendWindows();
+        return;
+      }
       output.appendLine(evt.message);
       return;
     }
@@ -547,8 +568,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           muted: runtime.state.ttsMute,
           playing: runtime.isSpeaking && !runtime.isPaused,
         });
-        await backend.request("show_translation", { show: runtime.state.showTranslationWindow });
-        await backend.request("show_minibar", { show: runtime.state.miniBarVisible });
+        await backend.request("show_translation", { show: shouldShowTranslation(false) });
+        await backend.request("show_minibar", { show: shouldShowMiniBar(false) });
       }
       const shouldSpeakReprocess =
         targetLangChanged &&
@@ -586,7 +607,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const force = runtime.optionsVisible;
     const allowWhenDisabled = force || key === "ui_announcements";
     if (!runtime.state.uiAnnouncementsEnabled && !allowWhenDisabled) return;
-    if (runtime.state.ttsMute && !force) return;
+    if (runtime.state.ttsMute) return;
     const token = ++runtime.uiAnnounceSeq;
     await ensureBackend();
     if (!runtime.backendOk) return;
@@ -605,20 +626,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     })();
 
     const targetPhrase = targetLangPhrase(uiLang, runtime.state.targetLang);
-    const phrases = buildAnnouncePhrases(uiLang, {
-      voiceLabel,
-      ratePct,
-      volumePct,
-      appPaused: runtime.state.appPaused,
-      muted: runtime.state.ttsMute,
-      translateEnabled: runtime.state.translateEnabled,
-      uiAnnouncements: runtime.state.uiAnnouncementsEnabled,
-      autoRead: runtime.state.autoReadNewResponses,
-      barTop: runtime.state.miniBarVisible,
-      barStart: runtime.state.showMiniBarOnStart,
-      showText: runtime.state.showTranslationWindow,
-      targetPhrase,
-    });
+      const phrases = buildAnnouncePhrases(uiLang, {
+        voiceLabel,
+        ratePct,
+        volumePct,
+        appPaused: runtime.state.appPaused,
+        muted: runtime.state.ttsMute,
+        translateEnabled: runtime.state.translateEnabled,
+        uiAnnouncements: runtime.state.uiAnnouncementsEnabled,
+        autoRead: runtime.state.autoReadNewResponses,
+        barTop: runtime.state.miniBarVisible,
+        barStart: runtime.state.showMiniBarOnStart,
+        showText: runtime.state.showTranslationWindow,
+        showTextStart: runtime.state.showTranslationOnStart,
+        targetPhrase,
+      });
 
     const phrase = phrases[key];
     if (!phrase) return;
@@ -655,7 +677,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (payload.token !== runtime.uiAnnounceSeq) return;
     await ensureBackend();
     if (!runtime.backendOk) return;
-    if (runtime.state.ttsMute && !payload.force) return;
+    if (runtime.state.ttsMute) return;
     if (runtime.isSpeaking) return;
     await backend.request("speak_queue", {
       queue: [payload.phrase],
@@ -663,7 +685,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       rate: payload.rate,
       volume: payload.volume,
       app_paused: runtime.state.appPaused,
-      muted: payload.force ? false : runtime.state.ttsMute,
+      muted: runtime.state.ttsMute,
     });
   }
 
@@ -671,7 +693,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const pending = runtime.uiAnnouncePending;
     if (!pending) return;
     if (runtime.isSpeaking) return;
-    if (runtime.state.ttsMute && !pending.force) return;
+    if (runtime.state.ttsMute) return;
     runtime.uiAnnouncePending = null;
     await playUiAnnouncement(pending);
   }
@@ -720,6 +742,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       barTop: boolean;
       barStart: boolean;
       showText: boolean;
+      showTextStart: boolean;
       targetPhrase: string;
     },
   ): Record<string, string> {
@@ -735,6 +758,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       bar_top: `La barre flottante est ${ctx.barTop ? "affichée" : "masquée"}.`,
       bar_start: ctx.barStart ? "La barre flottante s'affiche au démarrage." : "La barre flottante ne s'affiche pas au démarrage.",
       show_text: `La fenêtre texte est ${ctx.showText ? "affichée" : "masquée"}.`,
+      show_text_start: ctx.showTextStart
+        ? "La fenêtre texte s'affiche au démarrage."
+        : "La fenêtre texte ne s'affiche pas au démarrage.",
       target_lang: `La langue cible est ${ctx.targetPhrase}.`,
     };
     const en: Record<string, string> = {
@@ -749,6 +775,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       bar_top: `The floating bar is ${ctx.barTop ? "shown" : "hidden"}.`,
       bar_start: ctx.barStart ? "The floating bar shows on startup." : "The floating bar does not show on startup.",
       show_text: `The text window is ${ctx.showText ? "shown" : "hidden"}.`,
+      show_text_start: ctx.showTextStart
+        ? "The text window shows on startup."
+        : "The text window does not show on startup.",
       target_lang: `The target language is ${ctx.targetPhrase}.`,
     };
     const table = baseLang(uiLang) === "en" ? en : fr;
@@ -824,6 +853,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       runtime.state.ttsVoiceId = chosen;
       runtime.state.voicePerLang[lang] = chosen;
     }
+  }
+
+  function shouldShowTranslation(useStartFlag: boolean): boolean {
+    if (runtime.state.appPaused) return false;
+    if (!runtime.state.showTranslationWindow) return false;
+    return useStartFlag ? runtime.state.showTranslationOnStart : true;
+  }
+
+  function shouldShowMiniBar(useStartFlag: boolean): boolean {
+    if (runtime.state.appPaused) return false;
+    if (!runtime.state.miniBarVisible) return false;
+    return useStartFlag ? runtime.state.showMiniBarOnStart : true;
   }
 
   async function persistAndRefresh(): Promise<void> {

@@ -10,13 +10,15 @@
       grp_interface: "Interface",
       grp_text: "Fenêtre texte",
       ui_lang: "Langue interface :",
-      ui_announcements: "Annonces audio de l'interface (coupe la lecture)",
+      ui_announcements: "Annonces audio de l'interface",
       auto_read: "Lecture automatique des nouvelles réponses",
       bar_top: "Afficher la barre flottante",
       bar_start: "Afficher la barre flottante au démarrage",
       show_text: "Afficher la fenêtre texte",
+      show_text_start: "Afficher la fenêtre texte au démarrage",
       app_paused: "Mettre le service en pause",
-      tts_mute: "Muet (coupe la lecture)",
+      tts_mute: "Muet",
+      muted_voice: "Muet",
       voice: "Voix :",
       rate: "Vitesse :",
       volume: "Volume :",
@@ -35,8 +37,10 @@
       bar_top: "Show the floating bar",
       bar_start: "Show the floating bar on startup",
       show_text: "Show the text window",
+      show_text_start: "Show the text window on startup",
       app_paused: "Pause the service",
-      tts_mute: "Mute (stop playback)",
+      tts_mute: "Mute",
+      muted_voice: "Muted",
       voice: "Voice:",
       rate: "Speed:",
       volume: "Volume:",
@@ -55,8 +59,10 @@
       bar_top: "Schwebebalken anzeigen",
       bar_start: "Schwebebalken beim Start anzeigen",
       show_text: "Textfenster anzeigen",
+      show_text_start: "Textfenster beim Start anzeigen",
       app_paused: "Dienst pausieren",
-      tts_mute: "Stumm (Wiedergabe stoppen)",
+      tts_mute: "Stumm",
+      muted_voice: "Stumm",
       voice: "Stimme:",
       rate: "Geschwindigkeit:",
       volume: "Lautstärke:",
@@ -75,8 +81,10 @@
       bar_top: "Mostrar la barra flotante",
       bar_start: "Mostrar la barra flotante al iniciar",
       show_text: "Mostrar la ventana de texto",
+      show_text_start: "Mostrar la ventana de texto al iniciar",
       app_paused: "Pausar el servicio",
-      tts_mute: "Silencio (detener reproducción)",
+      tts_mute: "Silencio",
+      muted_voice: "Silencio",
       voice: "Voz:",
       rate: "Velocidad:",
       volume: "Volumen:",
@@ -95,8 +103,10 @@
       bar_top: "Mostra la barra flottante",
       bar_start: "Mostra la barra flottante all'avvio",
       show_text: "Mostra la finestra di testo",
+      show_text_start: "Mostra la finestra di testo all'avvio",
       app_paused: "Metti in pausa il servizio",
-      tts_mute: "Muto (ferma la riproduzione)",
+      tts_mute: "Muto",
+      muted_voice: "Muto",
       voice: "Voce:",
       rate: "Velocità:",
       volume: "Volume:",
@@ -115,8 +125,10 @@
       bar_top: "Mostrar a barra flutuante",
       bar_start: "Mostrar a barra flutuante ao iniciar",
       show_text: "Mostrar a janela de texto",
+      show_text_start: "Mostrar a janela de texto ao iniciar",
       app_paused: "Pausar o serviço",
-      tts_mute: "Mudo (parar reprodução)",
+      tts_mute: "Mudo",
+      muted_voice: "Mudo",
       voice: "Voz:",
       rate: "Velocidade:",
       volume: "Volume:",
@@ -135,8 +147,10 @@
       bar_top: "Zwevende balk tonen",
       bar_start: "Zwevende balk bij opstarten tonen",
       show_text: "Tekstvenster tonen",
+      show_text_start: "Tekstvenster bij opstarten tonen",
       app_paused: "Service pauzeren",
-      tts_mute: "Dempen (afspelen stoppen)",
+      tts_mute: "Dempen",
+      muted_voice: "Gedempt",
       voice: "Stem:",
       rate: "Snelheid:",
       volume: "Volume:",
@@ -155,8 +169,10 @@
       bar_top: "Показывать плавающую панель",
       bar_start: "Показывать плавающую панель при запуске",
       show_text: "Показывать окно текста",
+      show_text_start: "Показывать окно текста при запуске",
       app_paused: "Поставить службу на паузу",
-      tts_mute: "Без звука (остановить воспроизведение)",
+      tts_mute: "Без звука",
+      muted_voice: "Без звука",
       voice: "Голос:",
       rate: "Скорость:",
       volume: "Громкость:",
@@ -175,8 +191,10 @@
       bar_top: "フローティングバーを表示",
       bar_start: "起動時にフローティングバーを表示",
       show_text: "テキストウィンドウを表示",
+      show_text_start: "起動時にテキストウィンドウを表示",
       app_paused: "サービスを一時停止",
-      tts_mute: "ミュート（再生停止）",
+      tts_mute: "ミュート",
+      muted_voice: "ミュート",
       voice: "音声:",
       rate: "速度:",
       volume: "音量:",
@@ -195,8 +213,10 @@
       bar_top: "显示浮动栏",
       bar_start: "启动时显示浮动栏",
       show_text: "显示文本窗口",
+      show_text_start: "启动时显示文本窗口",
       app_paused: "暂停服务",
-      tts_mute: "静音（停止播放）",
+      tts_mute: "静音",
+      muted_voice: "静音",
       voice: "语音:",
       rate: "语速:",
       volume: "音量:",
@@ -215,8 +235,10 @@
       bar_top: "إظهار الشريط العائم",
       bar_start: "إظهار الشريط العائم عند البدء",
       show_text: "إظهار نافذة النص",
+      show_text_start: "إظهار نافذة النص عند البدء",
       app_paused: "إيقاف الخدمة مؤقتًا",
-      tts_mute: "كتم الصوت (إيقاف التشغيل)",
+      tts_mute: "كتم الصوت",
+      muted_voice: "كتم الصوت",
       voice: "الصوت:",
       rate: "السرعة:",
       volume: "الصوت:",
@@ -227,12 +249,14 @@
     },
   };
 
+  const app = byId("app");
   const uiLangSelect = byId("uiLangSelect");
   const uiAnnouncements = byId("uiAnnouncements");
   const autoRead = byId("autoRead");
   const barTop = byId("barTop");
   const barStart = byId("barStart");
   const showText = byId("showText");
+  const showTextStart = byId("showTextStart");
   const pauseService = byId("pauseService");
   const mute = byId("mute");
   const targetLangSelect = byId("targetLangSelect");
@@ -257,12 +281,13 @@
     applyTranslations(uiBase);
 
     status.textContent = model.backendOk ? model.statusText : "Backend Python indisponible";
+    app.classList.toggle("app-paused", !!s.appPaused);
 
     renderLangSelect(
       uiLangSelect,
       LANG_OPTIONS,
       String(s.uiLang || "fr").toLowerCase(),
-      false,
+      !!s.appPaused,
       (val) => postPatchWithAnnounce({ uiLang: val }, "ui_lang", false),
       (code) => voiceAvailability(code, model.voices || []),
     );
@@ -271,15 +296,18 @@
     barTop.checked = !!s.miniBarVisible;
     barStart.checked = !!s.showMiniBarOnStart;
     showText.checked = !!s.showTranslationWindow;
+    showTextStart.checked = !!s.showTranslationOnStart;
     pauseService.checked = !!s.appPaused;
     mute.checked = !!s.ttsMute;
     const translateAvailable = !!model.translateAvailable;
-    translate.disabled = !translateAvailable;
+    translate.disabled = !translateAvailable || !!s.appPaused;
     const tr = UI_TRANSLATIONS[String(s.uiLang || "fr").toLowerCase()] || UI_TRANSLATIONS.fr;
     lblTranslate.textContent = translateAvailable ? tr.translate : tr.translate_off;
     translate.checked = translateAvailable && !!s.translateEnabled;
+    barStart.disabled = !!s.appPaused || !barTop.checked;
+    showTextStart.disabled = !!s.appPaused || !showText.checked;
 
-    const targetDisabled = !(translateAvailable && translate.checked);
+    const targetDisabled = !(translateAvailable && translate.checked) || !!s.appPaused;
     renderLangSelect(
       targetLangSelect,
       LANG_OPTIONS,
@@ -290,7 +318,14 @@
     );
 
     const voiceLang = String(translateAvailable && translate.checked ? s.targetLang || "fr" : s.uiLang || "fr").toLowerCase();
-    fillVoices(voice, model.voices || [], s.ttsVoiceId, voiceLang);
+    const muted = !!s.ttsMute;
+    const mutedLabel = tr.muted_voice || tr.tts_mute || "Muted";
+    if (muted) {
+      renderMutedVoice(voice, mutedLabel);
+    } else {
+      fillVoices(voice, model.voices || [], s.ttsVoiceId, voiceLang);
+    }
+    voice.classList.toggle("is-muted", muted);
 
     rate.value = String(Math.round((s.ttsRate || 1) * 100));
     rateVal.textContent = `${rate.value}%`;
@@ -306,12 +341,18 @@
     const uiHasVoice = uiAvail === "available";
     const targetHasVoice = targetAvail === "available";
     const disableTtsForTarget = !targetHasVoice || !uiHasVoice;
-    mute.disabled = disableTtsForTarget;
-    voice.disabled = disableTtsForTarget || voice.disabled;
-    rate.disabled = disableTtsForTarget;
-    volume.disabled = disableTtsForTarget;
-    btnTest.disabled = disableTtsForTarget;
-    autoRead.disabled = !uiHasVoice;
+    const pauseDisabled = !!s.appPaused;
+    mute.disabled = disableTtsForTarget || pauseDisabled;
+    voice.disabled = disableTtsForTarget || muted || pauseDisabled || voice.disabled;
+    rate.disabled = disableTtsForTarget || muted || pauseDisabled;
+    volume.disabled = disableTtsForTarget || muted || pauseDisabled;
+    btnTest.disabled = disableTtsForTarget || muted || pauseDisabled;
+    autoRead.disabled = pauseDisabled || !uiHasVoice;
+    uiAnnouncements.disabled = pauseDisabled;
+    barTop.disabled = pauseDisabled;
+    barStart.disabled = pauseDisabled || !barTop.checked;
+    showText.disabled = pauseDisabled;
+    showTextStart.disabled = pauseDisabled || !showText.checked;
   }
 
   const LANG_OPTIONS = [
@@ -395,6 +436,14 @@
     } else {
       select.selectedIndex = 0;
     }
+  }
+
+  function renderMutedVoice(select, label) {
+    select.innerHTML = "";
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = label;
+    select.appendChild(opt);
   }
 
   let openSelect = null;
@@ -501,6 +550,9 @@
   barTop.addEventListener("change", () => postPatchWithAnnounce({ miniBarVisible: barTop.checked }, "bar_top", true));
   barStart.addEventListener("change", () => postPatchWithAnnounce({ showMiniBarOnStart: barStart.checked }, "bar_start", true));
   showText.addEventListener("change", () => postPatchWithAnnounce({ showTranslationWindow: showText.checked }, "show_text", true));
+  showTextStart.addEventListener("change", () =>
+    postPatchWithAnnounce({ showTranslationOnStart: showTextStart.checked }, "show_text_start", true),
+  );
   pauseService.addEventListener("change", () => postPatchWithAnnounce({ appPaused: pauseService.checked }, "app_paused", true));
   mute.addEventListener("change", () => postPatchWithAnnounce({ ttsMute: mute.checked }, "tts_mute", true));
   translate.addEventListener("change", () => postPatchWithAnnounce({ translateEnabled: translate.checked }, "translate", true));
@@ -551,6 +603,7 @@
     setText("lblBarTop", tr.bar_top);
     setText("lblBarStart", tr.bar_start);
     setText("lblShowText", tr.show_text);
+    setText("lblShowTextStart", tr.show_text_start);
     setText("lblPauseService", tr.app_paused);
     setText("lblMute", tr.tts_mute);
     setText("lblVoice", tr.voice);
