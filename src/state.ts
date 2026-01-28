@@ -5,6 +5,7 @@ import * as os from "node:os";
 
 export type AppState = {
   uiLang: string;
+  uiAnnouncementsEnabled: boolean;
   autoReadNewResponses: boolean;
   miniBarVisible: boolean;
   showMiniBarOnStart: boolean;
@@ -26,6 +27,7 @@ export type AppState = {
 
 export const DEFAULT_STATE: AppState = {
   uiLang: "fr",
+  uiAnnouncementsEnabled: true,
   autoReadNewResponses: true,
   miniBarVisible: true,
   showMiniBarOnStart: true,

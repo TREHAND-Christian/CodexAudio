@@ -77,12 +77,20 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
 
     <div class="group">
       <div class="groupTitle" id="grpGeneralTitle">Général</div>
+      <label class="row checkbox">
+        <input type="checkbox" id="pauseService" />
+        <span id="lblPauseService">Mettre le service en pause</span>
+      </label>
       <label class="row">
         <span class="label">
           <span id="uiLangSpeaker" class="speaker-icon small" aria-hidden="true">${speakerSvg}</span>
           <span id="lblUiLang">Langue interface :</span>
         </span>
         <div id="uiLangSelect" class="select"></div>
+      </label>
+      <label class="row checkbox">
+        <input type="checkbox" id="uiAnnouncements" />
+        <span id="lblUiAnnouncements">Annonces audio de l'interface</span>
       </label>
       <label class="row checkbox">
         <input type="checkbox" id="autoRead" />
@@ -104,10 +112,6 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
 
     <div class="group">
       <div class="groupTitle" id="grpTtsTitle">TTS</div>
-      <label class="row checkbox">
-        <input type="checkbox" id="pauseService" />
-        <span id="lblPauseService">Mettre le service en pause</span>
-      </label>
       <label class="row checkbox">
         <input type="checkbox" id="mute" />
         <span id="lblMute">Muet (coupe la lecture)</span>

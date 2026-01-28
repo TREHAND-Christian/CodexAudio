@@ -8,6 +8,7 @@
     fr: {
       grp_general: "Général",
       ui_lang: "Langue interface :",
+      ui_announcements: "Annonces audio de l'interface",
       auto_read: "Lecture automatique des nouvelles réponses",
       bar_top: "Afficher la barre flottante",
       bar_start: "Afficher la barre flottante au démarrage",
@@ -26,6 +27,7 @@
     en: {
       grp_general: "General",
       ui_lang: "Interface language:",
+      ui_announcements: "Interface audio announcements",
       auto_read: "Auto-read new responses",
       bar_top: "Show the floating bar",
       bar_start: "Show the floating bar on startup",
@@ -44,6 +46,7 @@
     de: {
       grp_general: "Allgemein",
       ui_lang: "Sprache der Oberfläche:",
+      ui_announcements: "Audioansagen der Oberfläche",
       auto_read: "Neue Antworten automatisch lesen",
       bar_top: "Schwebebalken anzeigen",
       bar_start: "Schwebebalken beim Start anzeigen",
@@ -62,6 +65,7 @@
     es: {
       grp_general: "General",
       ui_lang: "Idioma de la interfaz:",
+      ui_announcements: "Anuncios de audio de la interfaz",
       auto_read: "Lectura automática de nuevas respuestas",
       bar_top: "Mostrar la barra flotante",
       bar_start: "Mostrar la barra flotante al iniciar",
@@ -80,6 +84,7 @@
     it: {
       grp_general: "Generale",
       ui_lang: "Lingua dell'interfaccia:",
+      ui_announcements: "Annunci audio dell'interfaccia",
       auto_read: "Lettura automatica delle nuove risposte",
       bar_top: "Mostra la barra flottante",
       bar_start: "Mostra la barra flottante all'avvio",
@@ -98,6 +103,7 @@
     pt: {
       grp_general: "Geral",
       ui_lang: "Idioma da interface:",
+      ui_announcements: "Anúncios de áudio da interface",
       auto_read: "Leitura automática de novas respostas",
       bar_top: "Mostrar a barra flutuante",
       bar_start: "Mostrar a barra flutuante ao iniciar",
@@ -116,6 +122,7 @@
     nl: {
       grp_general: "Algemeen",
       ui_lang: "Interface taal:",
+      ui_announcements: "Audioaankondigingen van de interface",
       auto_read: "Nieuwe antwoorden automatisch lezen",
       bar_top: "Zwevende balk tonen",
       bar_start: "Zwevende balk bij opstarten tonen",
@@ -134,6 +141,7 @@
     ru: {
       grp_general: "Общее",
       ui_lang: "Язык интерфейса:",
+      ui_announcements: "Аудио‑объявления интерфейса",
       auto_read: "Авточтение новых ответов",
       bar_top: "Показывать плавающую панель",
       bar_start: "Показывать плавающую панель при запуске",
@@ -152,6 +160,7 @@
     ja: {
       grp_general: "一般",
       ui_lang: "UI 言語:",
+      ui_announcements: "インターフェース音声アナウンス",
       auto_read: "新しい回答を自動読み上げ",
       bar_top: "フローティングバーを表示",
       bar_start: "起動時にフローティングバーを表示",
@@ -170,6 +179,7 @@
     zh: {
       grp_general: "通用",
       ui_lang: "界面语言:",
+      ui_announcements: "界面语音提示",
       auto_read: "自动朗读新回复",
       bar_top: "显示浮动栏",
       bar_start: "启动时显示浮动栏",
@@ -188,6 +198,7 @@
     ar: {
       grp_general: "عام",
       ui_lang: "لغة الواجهة:",
+      ui_announcements: "إعلانات صوتية للواجهة",
       auto_read: "قراءة تلقائية للردود الجديدة",
       bar_top: "إظهار الشريط العائم",
       bar_start: "إظهار الشريط العائم عند البدء",
@@ -206,6 +217,7 @@
   };
 
   const uiLangSelect = byId("uiLangSelect");
+  const uiAnnouncements = byId("uiAnnouncements");
   const autoRead = byId("autoRead");
   const barTop = byId("barTop");
   const barStart = byId("barStart");
@@ -218,13 +230,14 @@
   const volume = byId("volume");
   const translate = byId("translate");
   const lblTranslate = byId("lblTranslate");
+  const btnTest = byId("btnTest");
   const rateVal = byId("rateVal");
   const volVal = byId("volVal");
   const status = byId("status");
   const uiLangSpeaker = byId("uiLangSpeaker");
   const targetLangSpeaker = byId("targetLangSpeaker");
 
-  byId("btnTest").addEventListener("click", () => vscode.postMessage({ type: "cmd", cmd: "testVoice" }));
+  btnTest.addEventListener("click", () => vscode.postMessage({ type: "cmd", cmd: "testVoice" }));
 
   function render() {
     if (!model) return;
@@ -242,6 +255,7 @@
       (val) => postPatchWithAnnounce({ uiLang: val }, "ui_lang", false),
       (code) => voiceAvailability(code, model.voices || []),
     );
+    uiAnnouncements.checked = !!s.uiAnnouncementsEnabled;
     autoRead.checked = !!s.autoReadNewResponses;
     barTop.checked = !!s.miniBarVisible;
     barStart.checked = !!s.showMiniBarOnStart;
@@ -273,8 +287,20 @@
     volVal.textContent = `${volume.value}%`;
 
     const voices = Array.isArray(model.voices) ? model.voices : [];
-    setSpeakerStatus(uiLangSpeaker, voiceAvailability(uiBase, voices));
-    setSpeakerStatus(targetLangSpeaker, voiceAvailability(String(s.targetLang || "fr").toLowerCase(), voices));
+    const uiAvail = voiceAvailability(uiBase, voices);
+    const targetAvail = voiceAvailability(String(s.targetLang || "fr").toLowerCase(), voices);
+    setSpeakerStatus(uiLangSpeaker, uiAvail);
+    setSpeakerStatus(targetLangSpeaker, targetAvail);
+
+    const uiHasVoice = uiAvail === "available";
+    const targetHasVoice = targetAvail === "available";
+    const disableTtsForTarget = !targetHasVoice || !uiHasVoice;
+    mute.disabled = disableTtsForTarget;
+    voice.disabled = disableTtsForTarget || voice.disabled;
+    rate.disabled = disableTtsForTarget;
+    volume.disabled = disableTtsForTarget;
+    btnTest.disabled = disableTtsForTarget;
+    autoRead.disabled = !uiHasVoice;
   }
 
   const LANG_OPTIONS = [
@@ -458,6 +484,9 @@
 
   // uiLang handled by custom dropdown
   autoRead.addEventListener("change", () => postPatchWithAnnounce({ autoReadNewResponses: autoRead.checked }, "auto_read", true));
+  uiAnnouncements.addEventListener("change", () =>
+    postPatchWithAnnounce({ uiAnnouncementsEnabled: uiAnnouncements.checked }, "ui_announcements", true),
+  );
   barTop.addEventListener("change", () => postPatchWithAnnounce({ miniBarVisible: barTop.checked }, "bar_top", true));
   barStart.addEventListener("change", () => postPatchWithAnnounce({ showMiniBarOnStart: barStart.checked }, "bar_start", true));
   showText.addEventListener("change", () => postPatchWithAnnounce({ showTranslationWindow: showText.checked }, "show_text", true));
@@ -504,6 +533,7 @@
     document.documentElement.lang = base;
     setText("grpGeneralTitle", tr.grp_general);
     setText("lblUiLang", tr.ui_lang);
+    setText("lblUiAnnouncements", tr.ui_announcements);
     setText("lblAutoRead", tr.auto_read);
     setText("lblBarTop", tr.bar_top);
     setText("lblBarStart", tr.bar_start);

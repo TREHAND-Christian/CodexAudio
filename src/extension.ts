@@ -32,6 +32,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     lastQueue: [] as string[],
     lastSourceText: "" as string,
     translateAvailable: true,
+    uiAnnounceSeq: 0,
   };
 
   const optionsProvider = new OptionsViewProvider(context, (msg) => onOptionsMessage(msg));
@@ -111,6 +112,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         await backend.request("resume");
         runtime.isPaused = false;
       } else {
+        if (!canSpeakForTarget()) return;
         // replay last queue if any
         if (runtime.lastQueue.length) {
           await backend.request("speak_queue", {
@@ -201,6 +203,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       runtime.voices = Array.isArray(voices) ? voices : [];
       runtime.availableLanguages = Array.isArray(langs) ? langs : [];
       runtime.translateAvailable = !!caps?.translate_available;
+      if (!hasVoiceForUiLang() && runtime.state.autoReadNewResponses) {
+        runtime.state.autoReadNewResponses = false;
+        await saveState(context, runtime.state);
+      }
       if (!runtime.translateAvailable && runtime.state.translateEnabled) {
         runtime.state.translateEnabled = false;
         await saveState(context, runtime.state);
@@ -369,7 +375,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       runtime.state.autoReadNewResponses &&
       runtime.state.ttsEnabled &&
       !runtime.state.ttsMute &&
-      !runtime.state.appPaused
+      !runtime.state.appPaused &&
+      canSpeakForTarget()
     ) {
       try {
         await backend.request("stop");
@@ -414,6 +421,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (cmd === "testVoice") {
         await ensureBackend();
         if (!runtime.backendOk) return;
+        if (!canSpeakForTarget()) return;
         const text = runtime.state.uiLang === "fr" ? "Test de voix." : "Voice test.";
         await backend.request("stop");
         await backend.request("speak_queue", {
@@ -438,6 +446,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const ui = baseLang(String(patch.uiLang));
         runtime.state.uiLang = ui;
         applyVoiceForCurrentLang();
+        if (!hasVoiceForUiLang() && runtime.state.autoReadNewResponses) {
+          runtime.state.autoReadNewResponses = false;
+        }
       }
 
       if (patch.translateEnabled === false) {
@@ -526,9 +537,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   async function announceOptionChange(key: string): Promise<void> {
     if (!runtime.state.ttsEnabled || runtime.state.ttsMute || runtime.state.appPaused) return;
-    if (runtime.isSpeaking || runtime.isPaused) return;
+    if (!runtime.state.uiAnnouncementsEnabled) return;
+    const token = ++runtime.uiAnnounceSeq;
     await ensureBackend();
     if (!runtime.backendOk) return;
+    if (token !== runtime.uiAnnounceSeq) return;
 
     const uiLang = baseLang(runtime.state.uiLang);
     const uiVoiceId = pickVoiceForLang(uiLang);
@@ -550,6 +563,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       appPaused: runtime.state.appPaused,
       muted: runtime.state.ttsMute,
       translateEnabled: runtime.state.translateEnabled,
+      uiAnnouncements: runtime.state.uiAnnouncementsEnabled,
       autoRead: runtime.state.autoReadNewResponses,
       barTop: runtime.state.miniBarVisible,
       barStart: runtime.state.showMiniBarOnStart,
@@ -561,6 +575,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (!phrase) return;
 
     try {
+      if (token !== runtime.uiAnnounceSeq) return;
+      if (runtime.isSpeaking || runtime.isPaused) {
+        await backend.request("stop");
+        runtime.isSpeaking = false;
+        runtime.isPaused = false;
+      }
+      if (token !== runtime.uiAnnounceSeq) return;
       await backend.request("speak_queue", {
         queue: [phrase],
         voice_id: uiVoiceId,
@@ -613,6 +634,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       appPaused: boolean;
       muted: boolean;
       translateEnabled: boolean;
+      uiAnnouncements: boolean;
       autoRead: boolean;
       barTop: boolean;
       barStart: boolean;
@@ -624,6 +646,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       voice: `la voix est maintenant ${ctx.voiceLabel}`,
       rate: `la vitesse de la voix est réglée sur ${ctx.ratePct} pour cent`,
       volume: `le volume est réglé sur ${ctx.volumePct} pour cent`,
+      ui_announcements: ctx.uiAnnouncements ? "les annonces audio de l'interface sont activées" : "les annonces audio de l'interface sont désactivées",
       app_paused: ctx.appPaused ? "le service est en pause" : "le service est actif",
       tts_mute: ctx.muted ? "le tts est en mode muet" : "le tts n'est plus en mode muet",
       translate: ctx.translateEnabled ? "la traduction est activée" : "la traduction est désactivée",
@@ -639,6 +662,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       voice: `the voice is now ${ctx.voiceLabel}`,
       rate: `the voice speed is set to ${ctx.ratePct} percent`,
       volume: `the volume is set to ${ctx.volumePct} percent`,
+      ui_announcements: ctx.uiAnnouncements ? "interface audio announcements are enabled" : "interface audio announcements are disabled",
       app_paused: ctx.appPaused ? "the service is paused" : "the service is active",
       tts_mute: ctx.muted ? "tts is muted" : "tts is unmuted",
       translate: ctx.translateEnabled ? "translation is enabled" : "translation is disabled",
@@ -659,9 +683,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       .split("-")[0] || "fr";
   }
 
-  function isLangAvailable(code: string): boolean {
+  function hasVoiceForLang(code: string): boolean {
     const c = baseLang(code);
-    return runtime.availableLanguages.some((l) => String(l || "").toLowerCase().startsWith(c));
+    if (!c) return false;
+    return runtime.voices.some((v) => {
+      const langs = Array.isArray(v.languages) ? v.languages : [];
+      return langs.some((l) => String(l || "").toLowerCase().startsWith(c));
+    });
+  }
+
+  function hasVoiceForUiLang(): boolean {
+    return hasVoiceForLang(runtime.state.uiLang);
+  }
+
+  function hasVoiceForTargetLang(): boolean {
+    return hasVoiceForLang(runtime.state.targetLang);
+  }
+
+  function canSpeakForTarget(): boolean {
+    return hasVoiceForTargetLang() && hasVoiceForUiLang();
   }
 
   function voiceMatchesLang(voiceId: string, lang: string): boolean {
