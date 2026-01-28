@@ -33,6 +33,8 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
     };
     view.webview.html = this.html(view.webview);
     view.webview.onDidReceiveMessage((msg) => this.onMessage(msg));
+    view.onDidChangeVisibility(() => this.onMessage({ type: "optionsVisibility", visible: view.visible }));
+    this.onMessage({ type: "optionsVisibility", visible: view.visible });
     if (this.model) this.postModel(this.model);
   }
 
@@ -55,7 +57,7 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
     const jsUri = webview.asWebviewUri(vscode.Uri.joinPath(this.ctx.extensionUri, "media", "options.js"));
     const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(this.ctx.extensionUri, "media", "options.css"));
     const speakerSvg =
-      "<svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" focusable=\"false\">" +
+      "<svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" focusable=\"false\">" +
       "<path d=\"M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.1-3.8v7.6A4.5 4.5 0 0 0 16.5 12zm2.5 0a7 7 0 0 0-3.5-6.1v12.2A7 7 0 0 0 19 12z\"/>" +
       "</svg>";
 
@@ -76,11 +78,40 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
     </div>
 
     <div class="group">
-      <div class="groupTitle" id="grpGeneralTitle">Général</div>
+      <div class="groupTitle" id="grpMainTitle">Principal</div>
       <label class="row checkbox">
         <input type="checkbox" id="pauseService" />
         <span id="lblPauseService">Mettre le service en pause</span>
       </label>
+      <label class="row checkbox">
+        <input type="checkbox" id="mute" />
+        <span id="lblMute">Muet (coupe la lecture)</span>
+      </label>
+      <label class="row checkbox">
+        <input type="checkbox" id="autoRead" />
+        <span id="lblAutoRead">Lecture automatique des nouvelles réponses</span>
+      </label>
+      <label class="row">
+        <span id="lblVoice">Voix :</span>
+        <select id="voice"></select>
+      </label>
+      <label class="row">
+        <span id="lblRateCaption">Vitesse :</span>
+        <input type="range" id="rate" min="50" max="200" step="5" />
+        <span id="rateVal" class="mono"></span>
+      </label>
+      <label class="row">
+        <span id="lblVolCaption">Volume :</span>
+        <input type="range" id="volume" min="0" max="100" step="1" />
+        <span id="volVal" class="mono"></span>
+      </label>
+      <div class="footer">
+        <button id="btnTest" class="secondary">Tester la voix</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="groupTitle" id="grpInterfaceTitle">Interface</div>
       <label class="row">
         <span class="label">
           <span id="uiLangSpeaker" class="speaker-icon small" aria-hidden="true">${speakerSvg}</span>
@@ -90,11 +121,7 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
       </label>
       <label class="row checkbox">
         <input type="checkbox" id="uiAnnouncements" />
-        <span id="lblUiAnnouncements">Annonces audio de l'interface</span>
-      </label>
-      <label class="row checkbox">
-        <input type="checkbox" id="autoRead" />
-        <span id="lblAutoRead">Lecture automatique des nouvelles réponses</span>
+        <span id="lblUiAnnouncements">Annonces audio de l'interface (coupe la lecture)</span>
       </label>
       <label class="row checkbox">
         <input type="checkbox" id="barTop" />
@@ -104,45 +131,18 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
         <input type="checkbox" id="barStart" />
         <span id="lblBarStart">Afficher la barre flottante au démarrage</span>
       </label>
-      <label class="row checkbox">
-        <input type="checkbox" id="showText" />
-        <span id="lblShowText">Afficher la fenêtre de traduction</span>
-      </label>
     </div>
 
     <div class="group">
-      <div class="groupTitle" id="grpTtsTitle">TTS</div>
+      <div class="groupTitle" id="grpTextTitle">Fenêtre texte</div>
       <label class="row checkbox">
-        <input type="checkbox" id="mute" />
-        <span id="lblMute">Muet (coupe la lecture)</span>
+        <input type="checkbox" id="showText" />
+        <span id="lblShowText">Afficher la fenêtre texte</span>
       </label>
-
-      <label class="row">
-        <span id="lblVoice">Voix :</span>
-        <select id="voice"></select>
-      </label>
-
-      <label class="row">
-        <span id="lblRateCaption">Vitesse :</span>
-        <input type="range" id="rate" min="50" max="200" step="5" />
-        <span id="rateVal" class="mono"></span>
-      </label>
-
-      <label class="row">
-        <span id="lblVolCaption">Volume :</span>
-        <input type="range" id="volume" min="0" max="100" step="1" />
-        <span id="volVal" class="mono"></span>
-      </label>
-
-      <div class="footer">
-        <button id="btnTest" class="secondary">Tester la voix</button>
-      </div>
-
       <label class="row checkbox">
         <input type="checkbox" id="translate" />
         <span id="lblTranslate">Traduire si nécessaire (googletrans)</span>
       </label>
-
       <label class="row">
         <span class="label">
           <span id="targetLangSpeaker" class="speaker-icon small" aria-hidden="true">${speakerSvg}</span>

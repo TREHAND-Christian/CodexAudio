@@ -32,7 +32,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     lastQueue: [] as string[],
     lastSourceText: "" as string,
     translateAvailable: true,
+    optionsVisible: false,
     uiAnnounceSeq: 0,
+    uiAnnouncePending: null as null | {
+      token: number;
+      phrase: string;
+      voiceId: string;
+      rate: number;
+      volume: number;
+      force: boolean;
+    },
   };
 
   const optionsProvider = new OptionsViewProvider(context, (msg) => onOptionsMessage(msg));
@@ -257,6 +266,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           playing: false,
         });
       });
+      void playPendingUiAnnouncement();
       refreshUi();
       return;
     }
@@ -436,11 +446,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     }
 
+    if (m.type === "optionsVisibility" && typeof m.visible === "boolean") {
+      runtime.optionsVisible = m.visible;
+      return;
+    }
+
     if (m.type === "patchState" && m.patch && typeof m.patch === "object") {
       const announce = m.announce === true;
       const announceKey = typeof m.announceKey === "string" ? m.announceKey : "";
       const patch = m.patch as Partial<AppState>;
       runtime.state = { ...runtime.state, ...patch };
+      const targetLangChanged = Object.prototype.hasOwnProperty.call(patch, "targetLang");
+      const translateChanged = Object.prototype.hasOwnProperty.call(patch, "translateEnabled");
+      const shouldInterrupt = (announce && !!announceKey) || targetLangChanged;
+      let reprocessQueue: string[] | null = null;
 
       if (patch.uiLang) {
         const ui = baseLang(String(patch.uiLang));
@@ -470,8 +489,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (lang) runtime.state.voicePerLang[lang] = patch.ttsVoiceId;
       }
 
-      const needsReprocess =
-        Object.prototype.hasOwnProperty.call(patch, "targetLang") || Object.prototype.hasOwnProperty.call(patch, "translateEnabled");
+      if (shouldInterrupt) {
+        await interruptPlayback();
+      }
+
+      const needsReprocess = targetLangChanged || translateChanged;
       if (needsReprocess && runtime.lastSourceText && runtime.lastSourceText.trim()) {
         await ensureBackend();
         if (runtime.backendOk) {
@@ -501,6 +523,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             runtime.state.lastDisplayText = displayText;
             runtime.state.lastTranslationLabel = label;
             runtime.state.lastQueue = queue.length ? queue : [displayText];
+            reprocessQueue = runtime.state.lastQueue;
 
             await backend.request("set_translation", {
               label,
@@ -527,7 +550,31 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         await backend.request("show_translation", { show: runtime.state.showTranslationWindow });
         await backend.request("show_minibar", { show: runtime.state.miniBarVisible });
       }
-      if (announce && announceKey) {
+      const shouldSpeakReprocess =
+        targetLangChanged &&
+        Array.isArray(reprocessQueue) &&
+        reprocessQueue.length > 0 &&
+        runtime.state.ttsEnabled &&
+        !runtime.state.ttsMute &&
+        !runtime.state.appPaused &&
+        canSpeakForTarget();
+      if (shouldSpeakReprocess) {
+        await ensureBackend();
+        if (runtime.backendOk) {
+          try {
+            await backend.request("speak_queue", {
+              queue: reprocessQueue,
+              voice_id: runtime.state.ttsVoiceId,
+              rate: runtime.state.ttsRate,
+              volume: runtime.state.ttsVolume,
+              app_paused: runtime.state.appPaused,
+              muted: runtime.state.ttsMute,
+            });
+          } catch {
+            // ignore
+          }
+        }
+      } else if (announce && announceKey) {
         void announceOptionChange(announceKey);
       }
       await persistAndRefresh();
@@ -536,8 +583,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   async function announceOptionChange(key: string): Promise<void> {
-    if (!runtime.state.ttsEnabled || runtime.state.ttsMute || runtime.state.appPaused) return;
-    if (!runtime.state.uiAnnouncementsEnabled) return;
+    const force = runtime.optionsVisible;
+    const allowWhenDisabled = force || key === "ui_announcements";
+    if (!runtime.state.uiAnnouncementsEnabled && !allowWhenDisabled) return;
+    if (runtime.state.ttsMute && !force) return;
     const token = ++runtime.uiAnnounceSeq;
     await ensureBackend();
     if (!runtime.backendOk) return;
@@ -576,23 +625,68 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     try {
       if (token !== runtime.uiAnnounceSeq) return;
-      if (runtime.isSpeaking || runtime.isPaused) {
-        await backend.request("stop");
-        runtime.isSpeaking = false;
-        runtime.isPaused = false;
-      }
-      if (token !== runtime.uiAnnounceSeq) return;
-      await backend.request("speak_queue", {
-        queue: [phrase],
-        voice_id: uiVoiceId,
+      const payload = {
+        token,
+        phrase,
+        voiceId: uiVoiceId,
         rate: runtime.state.ttsRate,
         volume: runtime.state.ttsVolume,
-        app_paused: runtime.state.appPaused,
-        muted: runtime.state.ttsMute,
-      });
+        force,
+      };
+      if (runtime.isSpeaking) {
+        runtime.uiAnnouncePending = payload;
+        return;
+      }
+      runtime.uiAnnouncePending = null;
+      await playUiAnnouncement(payload);
     } catch {
       // ignore
     }
+  }
+
+  async function playUiAnnouncement(payload: {
+    token: number;
+    phrase: string;
+    voiceId: string;
+    rate: number;
+    volume: number;
+    force: boolean;
+  }): Promise<void> {
+    if (payload.token !== runtime.uiAnnounceSeq) return;
+    await ensureBackend();
+    if (!runtime.backendOk) return;
+    if (runtime.state.ttsMute && !payload.force) return;
+    if (runtime.isSpeaking) return;
+    await backend.request("speak_queue", {
+      queue: [payload.phrase],
+      voice_id: payload.voiceId,
+      rate: payload.rate,
+      volume: payload.volume,
+      app_paused: runtime.state.appPaused,
+      muted: payload.force ? false : runtime.state.ttsMute,
+    });
+  }
+
+  async function playPendingUiAnnouncement(): Promise<void> {
+    const pending = runtime.uiAnnouncePending;
+    if (!pending) return;
+    if (runtime.isSpeaking) return;
+    if (runtime.state.ttsMute && !pending.force) return;
+    runtime.uiAnnouncePending = null;
+    await playUiAnnouncement(pending);
+  }
+
+  async function interruptPlayback(): Promise<void> {
+    await ensureBackend();
+    if (!runtime.backendOk) return;
+    if (!runtime.isSpeaking && !runtime.isPaused) return;
+    try {
+      await backend.request("stop");
+    } catch {
+      // ignore
+    }
+    runtime.isSpeaking = false;
+    runtime.isPaused = false;
   }
 
   function targetLangPhrase(uiLang: string, targetLang: string): string {
@@ -609,20 +703,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       zh: "中文",
       ar: "العربية",
     }[baseLang(targetLang)] || baseLang(targetLang);
-    const templates: Record<string, string> = {
-      fr: "la langue cible est {label}",
-      en: "the target language is {label}",
-      de: "die Zielsprache ist {label}",
-      es: "el idioma de destino es {label}",
-      it: "la lingua di destinazione è {label}",
-      pt: "o idioma de destino é {label}",
-      nl: "de doeltaal is {label}",
-      ru: "целевой язык — {label}",
-      ja: "ターゲット言語は{label}です",
-      zh: "目标语言是{label}",
-      ar: "اللغة المستهدفة هي {label}",
-    };
-    return (templates[baseLang(uiLang)] || templates.fr).replace("{label}", label);
+    return label || (baseLang(uiLang) === "en" ? "Auto" : "Auto");
   }
 
   function buildAnnouncePhrases(
@@ -643,34 +724,32 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     },
   ): Record<string, string> {
     const fr: Record<string, string> = {
-      voice: `la voix est maintenant ${ctx.voiceLabel}`,
-      rate: `la vitesse de la voix est réglée sur ${ctx.ratePct} pour cent`,
-      volume: `le volume est réglé sur ${ctx.volumePct} pour cent`,
-      ui_announcements: ctx.uiAnnouncements ? "les annonces audio de l'interface sont activées" : "les annonces audio de l'interface sont désactivées",
-      app_paused: ctx.appPaused ? "le service est en pause" : "le service est actif",
-      tts_mute: ctx.muted ? "le tts est en mode muet" : "le tts n'est plus en mode muet",
-      translate: ctx.translateEnabled ? "la traduction est activée" : "la traduction est désactivée",
-      auto_read: ctx.autoRead ? "la lecture automatique est activée" : "la lecture automatique est désactivée",
-      bar_top: ctx.barTop ? "la barre flottante est affichée" : "la barre flottante est masquée",
-      bar_start: ctx.barStart
-        ? "la barre flottante s'affichera au démarrage"
-        : "la barre flottante ne s'affichera pas au démarrage",
-      show_text: ctx.showText ? "l'affichage du texte est activé" : "l'affichage du texte est désactivé",
-      target_lang: ctx.targetPhrase,
+      voice: `La voix est réglée sur ${ctx.voiceLabel}.`,
+      rate: `La vitesse est réglée à ${ctx.ratePct} %.`,
+      volume: `Le volume est réglé à ${ctx.volumePct} %.`,
+      ui_announcements: `Les annonces audio de l'interface sont ${ctx.uiAnnouncements ? "activées" : "désactivées"}.`,
+      app_paused: ctx.appPaused ? "Le service est en pause." : "Le service est actif.",
+      tts_mute: ctx.muted ? "La lecture est coupée." : "La lecture est active.",
+      translate: `La traduction est ${ctx.translateEnabled ? "activée" : "désactivée"}.`,
+      auto_read: `La lecture automatique est ${ctx.autoRead ? "activée" : "désactivée"}.`,
+      bar_top: `La barre flottante est ${ctx.barTop ? "affichée" : "masquée"}.`,
+      bar_start: ctx.barStart ? "La barre flottante s'affiche au démarrage." : "La barre flottante ne s'affiche pas au démarrage.",
+      show_text: `La fenêtre texte est ${ctx.showText ? "affichée" : "masquée"}.`,
+      target_lang: `La langue cible est ${ctx.targetPhrase}.`,
     };
     const en: Record<string, string> = {
-      voice: `the voice is now ${ctx.voiceLabel}`,
-      rate: `the voice speed is set to ${ctx.ratePct} percent`,
-      volume: `the volume is set to ${ctx.volumePct} percent`,
-      ui_announcements: ctx.uiAnnouncements ? "interface audio announcements are enabled" : "interface audio announcements are disabled",
-      app_paused: ctx.appPaused ? "the service is paused" : "the service is active",
-      tts_mute: ctx.muted ? "tts is muted" : "tts is unmuted",
-      translate: ctx.translateEnabled ? "translation is enabled" : "translation is disabled",
-      auto_read: ctx.autoRead ? "auto read is enabled" : "auto read is disabled",
-      bar_top: ctx.barTop ? "floating bar is shown" : "floating bar is hidden",
-      bar_start: ctx.barStart ? "floating bar will show on startup" : "floating bar will not show on startup",
-      show_text: ctx.showText ? "translation window is shown" : "translation window is hidden",
-      target_lang: ctx.targetPhrase,
+      voice: `The voice is set to ${ctx.voiceLabel}.`,
+      rate: `The speed is set to ${ctx.ratePct} percent.`,
+      volume: `The volume is set to ${ctx.volumePct} percent.`,
+      ui_announcements: `Interface announcements are ${ctx.uiAnnouncements ? "enabled" : "disabled"}.`,
+      app_paused: ctx.appPaused ? "The service is paused." : "The service is active.",
+      tts_mute: ctx.muted ? "Playback is muted." : "Playback is active.",
+      translate: `Translation is ${ctx.translateEnabled ? "enabled" : "disabled"}.`,
+      auto_read: `Auto-read is ${ctx.autoRead ? "enabled" : "disabled"}.`,
+      bar_top: `The floating bar is ${ctx.barTop ? "shown" : "hidden"}.`,
+      bar_start: ctx.barStart ? "The floating bar shows on startup." : "The floating bar does not show on startup.",
+      show_text: `The text window is ${ctx.showText ? "shown" : "hidden"}.`,
+      target_lang: `The target language is ${ctx.targetPhrase}.`,
     };
     const table = baseLang(uiLang) === "en" ? en : fr;
     return table;

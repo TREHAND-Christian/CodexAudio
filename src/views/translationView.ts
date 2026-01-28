@@ -27,7 +27,7 @@ export class TranslationPanel implements vscode.Disposable {
     }
     this.panel = vscode.window.createWebviewPanel(
       "codexAudio.translation",
-      "Traduction",
+      "Fenêtre texte",
       { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
       {
         enableScripts: true,
@@ -45,7 +45,7 @@ export class TranslationPanel implements vscode.Disposable {
   set(payload: TranslationPayload): void {
     this.lastPayload = payload;
     if (!this.panel) return;
-    this.panel.title = payload.label ? `Traduction - ${payload.label}` : "Traduction";
+    this.panel.title = payload.label ? `Fenêtre texte - ${payload.label}` : "Fenêtre texte";
     this.panel.webview.postMessage({ type: "set", payload });
   }
 
@@ -62,7 +62,7 @@ export class TranslationPanel implements vscode.Disposable {
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="${cssUri}" />
-  <title>Traduction</title>
+  <title>Fenêtre texte</title>
 </head>
 <body>
   <div id="root">

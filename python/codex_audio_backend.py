@@ -752,7 +752,7 @@ class _ChatWebPage(QWebEnginePage if QWebEnginePage is not None else object):
 class TranslationWindow(QWidget):
     def __init__(self, on_ui_cmd=None):
         super().__init__()
-        self.setWindowTitle("Traduction")
+        self.setWindowTitle("Fenêtre texte")
         self.setWindowFlag(Qt.Tool, True)
         self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
         self.setAttribute(Qt.WA_QuitOnClose, False)
@@ -827,7 +827,7 @@ class TranslationWindow(QWidget):
         self._last_text = text or ""
         self._last_label = label or ""
         self._queue = list(queue or [])
-        title = f"Traduction - {label}" if label else "Traduction"
+        title = f"Fenêtre texte - {label}" if label else "Fenêtre texte"
         self.setWindowTitle(title)
         self._render()
 

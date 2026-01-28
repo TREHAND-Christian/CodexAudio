@@ -6,14 +6,15 @@
 
   const UI_TRANSLATIONS = {
     fr: {
-      grp_general: "Général",
+      grp_main: "Principal",
+      grp_interface: "Interface",
+      grp_text: "Fenêtre texte",
       ui_lang: "Langue interface :",
-      ui_announcements: "Annonces audio de l'interface",
+      ui_announcements: "Annonces audio de l'interface (coupe la lecture)",
       auto_read: "Lecture automatique des nouvelles réponses",
       bar_top: "Afficher la barre flottante",
       bar_start: "Afficher la barre flottante au démarrage",
-      show_text: "Afficher la fenêtre de traduction",
-      grp_tts: "TTS",
+      show_text: "Afficher la fenêtre texte",
       app_paused: "Mettre le service en pause",
       tts_mute: "Muet (coupe la lecture)",
       voice: "Voix :",
@@ -25,14 +26,15 @@
       target: "Langue cible :",
     },
     en: {
-      grp_general: "General",
+      grp_main: "Main",
+      grp_interface: "Interface",
+      grp_text: "Text window",
       ui_lang: "Interface language:",
-      ui_announcements: "Interface audio announcements",
+      ui_announcements: "Interface audio announcements (stops playback)",
       auto_read: "Auto-read new responses",
       bar_top: "Show the floating bar",
       bar_start: "Show the floating bar on startup",
-      show_text: "Show the translation window",
-      grp_tts: "TTS",
+      show_text: "Show the text window",
       app_paused: "Pause the service",
       tts_mute: "Mute (stop playback)",
       voice: "Voice:",
@@ -44,14 +46,15 @@
       target: "Target language:",
     },
     de: {
-      grp_general: "Allgemein",
+      grp_main: "Haupt",
+      grp_interface: "Oberfläche",
+      grp_text: "Textfenster",
       ui_lang: "Sprache der Oberfläche:",
-      ui_announcements: "Audioansagen der Oberfläche",
+      ui_announcements: "Audioansagen der Oberfläche (stoppt die Wiedergabe)",
       auto_read: "Neue Antworten automatisch lesen",
       bar_top: "Schwebebalken anzeigen",
       bar_start: "Schwebebalken beim Start anzeigen",
-      show_text: "Übersetzungsfenster anzeigen",
-      grp_tts: "TTS",
+      show_text: "Textfenster anzeigen",
       app_paused: "Dienst pausieren",
       tts_mute: "Stumm (Wiedergabe stoppen)",
       voice: "Stimme:",
@@ -63,14 +66,15 @@
       target: "Zielsprache:",
     },
     es: {
-      grp_general: "General",
+      grp_main: "Principal",
+      grp_interface: "Interfaz",
+      grp_text: "Ventana de texto",
       ui_lang: "Idioma de la interfaz:",
-      ui_announcements: "Anuncios de audio de la interfaz",
+      ui_announcements: "Anuncios de audio de la interfaz (interrumpe la reproducción)",
       auto_read: "Lectura automática de nuevas respuestas",
       bar_top: "Mostrar la barra flotante",
       bar_start: "Mostrar la barra flotante al iniciar",
-      show_text: "Mostrar la ventana de traducción",
-      grp_tts: "TTS",
+      show_text: "Mostrar la ventana de texto",
       app_paused: "Pausar el servicio",
       tts_mute: "Silencio (detener reproducción)",
       voice: "Voz:",
@@ -82,14 +86,15 @@
       target: "Idioma de destino:",
     },
     it: {
-      grp_general: "Generale",
+      grp_main: "Principale",
+      grp_interface: "Interfaccia",
+      grp_text: "Finestra di testo",
       ui_lang: "Lingua dell'interfaccia:",
-      ui_announcements: "Annunci audio dell'interfaccia",
+      ui_announcements: "Annunci audio dell'interfaccia (interrompe la riproduzione)",
       auto_read: "Lettura automatica delle nuove risposte",
       bar_top: "Mostra la barra flottante",
       bar_start: "Mostra la barra flottante all'avvio",
-      show_text: "Mostra la finestra di traduzione",
-      grp_tts: "TTS",
+      show_text: "Mostra la finestra di testo",
       app_paused: "Metti in pausa il servizio",
       tts_mute: "Muto (ferma la riproduzione)",
       voice: "Voce:",
@@ -101,14 +106,15 @@
       target: "Lingua di destinazione:",
     },
     pt: {
-      grp_general: "Geral",
+      grp_main: "Principal",
+      grp_interface: "Interface",
+      grp_text: "Janela de texto",
       ui_lang: "Idioma da interface:",
-      ui_announcements: "Anúncios de áudio da interface",
+      ui_announcements: "Anúncios de áudio da interface (interrompe a reprodução)",
       auto_read: "Leitura automática de novas respostas",
       bar_top: "Mostrar a barra flutuante",
       bar_start: "Mostrar a barra flutuante ao iniciar",
-      show_text: "Mostrar a janela de tradução",
-      grp_tts: "TTS",
+      show_text: "Mostrar a janela de texto",
       app_paused: "Pausar o serviço",
       tts_mute: "Mudo (parar reprodução)",
       voice: "Voz:",
@@ -120,14 +126,15 @@
       target: "Idioma alvo:",
     },
     nl: {
-      grp_general: "Algemeen",
+      grp_main: "Hoofd",
+      grp_interface: "Interface",
+      grp_text: "Tekstvenster",
       ui_lang: "Interface taal:",
-      ui_announcements: "Audioaankondigingen van de interface",
+      ui_announcements: "Audioaankondigingen van de interface (onderbreekt de weergave)",
       auto_read: "Nieuwe antwoorden automatisch lezen",
       bar_top: "Zwevende balk tonen",
       bar_start: "Zwevende balk bij opstarten tonen",
-      show_text: "Vertaalvenster tonen",
-      grp_tts: "TTS",
+      show_text: "Tekstvenster tonen",
       app_paused: "Service pauzeren",
       tts_mute: "Dempen (afspelen stoppen)",
       voice: "Stem:",
@@ -139,14 +146,15 @@
       target: "Doeltaal:",
     },
     ru: {
-      grp_general: "Общее",
+      grp_main: "Основное",
+      grp_interface: "Интерфейс",
+      grp_text: "Окно текста",
       ui_lang: "Язык интерфейса:",
-      ui_announcements: "Аудио‑объявления интерфейса",
+      ui_announcements: "Аудио‑объявления интерфейса (прерывает воспроизведение)",
       auto_read: "Авточтение новых ответов",
       bar_top: "Показывать плавающую панель",
       bar_start: "Показывать плавающую панель при запуске",
-      show_text: "Показывать окно перевода",
-      grp_tts: "TTS",
+      show_text: "Показывать окно текста",
       app_paused: "Поставить службу на паузу",
       tts_mute: "Без звука (остановить воспроизведение)",
       voice: "Голос:",
@@ -158,14 +166,15 @@
       target: "Целевой язык:",
     },
     ja: {
-      grp_general: "一般",
+      grp_main: "メイン",
+      grp_interface: "インターフェース",
+      grp_text: "テキストウィンドウ",
       ui_lang: "UI 言語:",
-      ui_announcements: "インターフェース音声アナウンス",
+      ui_announcements: "インターフェース音声アナウンス（再生を止めます）",
       auto_read: "新しい回答を自動読み上げ",
       bar_top: "フローティングバーを表示",
       bar_start: "起動時にフローティングバーを表示",
-      show_text: "翻訳ウィンドウを表示",
-      grp_tts: "TTS",
+      show_text: "テキストウィンドウを表示",
       app_paused: "サービスを一時停止",
       tts_mute: "ミュート（再生停止）",
       voice: "音声:",
@@ -177,14 +186,15 @@
       target: "ターゲット言語:",
     },
     zh: {
-      grp_general: "通用",
+      grp_main: "主要",
+      grp_interface: "界面",
+      grp_text: "文本窗口",
       ui_lang: "界面语言:",
-      ui_announcements: "界面语音提示",
+      ui_announcements: "界面语音提示（会中断播放）",
       auto_read: "自动朗读新回复",
       bar_top: "显示浮动栏",
       bar_start: "启动时显示浮动栏",
-      show_text: "显示翻译窗口",
-      grp_tts: "TTS",
+      show_text: "显示文本窗口",
       app_paused: "暂停服务",
       tts_mute: "静音（停止播放）",
       voice: "语音:",
@@ -196,14 +206,15 @@
       target: "目标语言:",
     },
     ar: {
-      grp_general: "عام",
+      grp_main: "رئيسي",
+      grp_interface: "الواجهة",
+      grp_text: "نافذة النص",
       ui_lang: "لغة الواجهة:",
-      ui_announcements: "إعلانات صوتية للواجهة",
+      ui_announcements: "إعلانات صوتية للواجهة (توقف التشغيل)",
       auto_read: "قراءة تلقائية للردود الجديدة",
       bar_top: "إظهار الشريط العائم",
       bar_start: "إظهار الشريط العائم عند البدء",
-      show_text: "إظهار نافذة الترجمة",
-      grp_tts: "TTS",
+      show_text: "إظهار نافذة النص",
       app_paused: "إيقاف الخدمة مؤقتًا",
       tts_mute: "كتم الصوت (إيقاف التشغيل)",
       voice: "الصوت:",
@@ -457,7 +468,7 @@
   document.addEventListener("click", () => closeOpenSelect());
 
   function speakerSvgHtml(size) {
-    const dim = size === "small" ? 14 : 16;
+    const dim = size === "small" ? 18 : 20;
     return (
       `<svg aria-hidden="true" viewBox="0 0 24 24" width="${dim}" height="${dim}" focusable="false">` +
       '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.1-3.8v7.6A4.5 4.5 0 0 0 16.5 12zm2.5 0a7 7 0 0 0-3.5-6.1v12.2A7 7 0 0 0 19 12z"/>' +
@@ -531,14 +542,15 @@
     const base = String(lang || "fr").toLowerCase();
     const tr = UI_TRANSLATIONS[base] || UI_TRANSLATIONS.fr;
     document.documentElement.lang = base;
-    setText("grpGeneralTitle", tr.grp_general);
+    setText("grpMainTitle", tr.grp_main);
+    setText("grpInterfaceTitle", tr.grp_interface);
+    setText("grpTextTitle", tr.grp_text);
     setText("lblUiLang", tr.ui_lang);
     setText("lblUiAnnouncements", tr.ui_announcements);
     setText("lblAutoRead", tr.auto_read);
     setText("lblBarTop", tr.bar_top);
     setText("lblBarStart", tr.bar_start);
     setText("lblShowText", tr.show_text);
-    setText("grpTtsTitle", tr.grp_tts);
     setText("lblPauseService", tr.app_paused);
     setText("lblMute", tr.tts_mute);
     setText("lblVoice", tr.voice);

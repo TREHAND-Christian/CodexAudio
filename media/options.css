@@ -1,76 +1,126 @@
 :root {
   color-scheme: light dark;
+  --ca-accent: var(--vscode-button-background);
+  --ca-accent-strong: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+  --ca-bg: color-mix(in srgb, var(--vscode-sideBar-background) 92%, #000 8%);
+  --ca-bg-2: color-mix(in srgb, var(--vscode-editor-background) 90%, var(--vscode-sideBar-background) 10%);
+  --ca-surface: color-mix(in srgb, var(--vscode-editorWidget-background) 86%, #000 14%);
+  --ca-surface-2: color-mix(in srgb, var(--vscode-editor-background) 86%, #000 14%);
+  --ca-border: color-mix(in srgb, var(--vscode-panel-border) 70%, transparent 30%);
+  --ca-muted: var(--vscode-descriptionForeground);
+  --ca-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+  --ca-radius: 12px;
+  --ca-radius-sm: 8px;
+  --ca-gap: 10px;
 }
 
 body {
   font-family: var(--vscode-font-family);
-  padding: 12px;
+  padding: 14px;
   color: var(--vscode-foreground);
-  background: var(--vscode-sideBar-background);
+  background: linear-gradient(155deg, var(--ca-bg) 0%, var(--ca-bg-2) 100%);
+}
+
+#app {
+  display: grid;
+  gap: 12px;
 }
 
 .header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
 }
 
 .title {
   font-weight: 700;
   font-size: 16px;
+  letter-spacing: 0.02em;
 }
 
 .status {
-  opacity: 0.85;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--ca-border);
+  background: var(--ca-surface);
   font-size: 12px;
+  color: var(--ca-muted);
   text-align: right;
 }
 
 .controls {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
-  margin-bottom: 12px;
+}
+
+button,
+select,
+input[type="range"] {
+  font: inherit;
 }
 
 button {
   border: 1px solid var(--vscode-button-border, transparent);
-  background: var(--vscode-button-background);
+  background: linear-gradient(135deg, var(--ca-accent) 0%, var(--ca-accent-strong) 100%);
   color: var(--vscode-button-foreground);
-  padding: 6px 8px;
-  border-radius: 6px;
+  padding: 7px 10px;
+  border-radius: var(--ca-radius-sm);
   cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.12s ease;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+  box-shadow: none;
+  transform: none;
 }
 
 button.secondary {
   background: var(--vscode-button-secondaryBackground);
   color: var(--vscode-button-secondaryForeground);
+  box-shadow: none;
 }
 
 .group {
-  border: 1px solid var(--vscode-panel-border);
-  border-radius: 10px;
-  padding: 10px;
-  margin-bottom: 12px;
+  border: 1px solid var(--ca-border);
+  border-radius: var(--ca-radius);
+  padding: 12px;
+  background: var(--ca-surface);
+  box-shadow: var(--ca-shadow);
+  display: grid;
+  gap: 6px;
 }
 
 .groupTitle {
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  color: var(--ca-muted);
 }
 
 .row {
   display: grid;
-  grid-template-columns: 150px 1fr auto;
+  grid-template-columns: minmax(120px, 170px) 1fr auto;
   align-items: center;
-  gap: 10px;
-  margin: 8px 0;
+  gap: var(--ca-gap);
+  margin: 6px 0;
 }
 
 .row.checkbox {
-  grid-template-columns: 20px 1fr;
+  grid-template-columns: 18px 1fr;
 }
 
 .label {
@@ -79,34 +129,10 @@ button.secondary {
   gap: 6px;
 }
 
-.speaker {
-  width: 14px;
-  height: 14px;
-  display: inline-block;
-  background-color: var(--vscode-charts-green);
-  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.1-3.8v7.6A4.5 4.5 0 0 0 16.5 12zm2.5 0a7 7 0 0 0-3.5-6.1v12.2A7 7 0 0 0 19 12z'/></svg>") no-repeat center / contain;
-  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.1-3.8v7.6A4.5 4.5 0 0 0 16.5 12zm2.5 0a7 7 0 0 0-3.5-6.1v12.2A7 7 0 0 0 19 12z'/></svg>") no-repeat center / contain;
-  position: relative;
-  font-size: 14px;
-  line-height: 14px;
-  color: var(--vscode-charts-green);
-}
-
-/* Fallback if mask is not supported in Webview */
-.speaker::before {
-  content: "🔊";
-  display: inline-block;
-  line-height: 14px;
-}
-
-.speaker.is-missing {
-  background-color: var(--vscode-charts-red);
-  color: var(--vscode-charts-red);
-}
-
-.speaker.is-unknown {
-  background-color: var(--vscode-disabledForeground);
-  color: var(--vscode-disabledForeground);
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ca-accent);
 }
 
 select,
@@ -118,8 +144,49 @@ select#voice {
   background: var(--vscode-dropdown-background);
   color: var(--vscode-dropdown-foreground);
   border: 1px solid var(--vscode-dropdown-border);
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: var(--ca-radius-sm);
+  padding: 6px 8px;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ca-accent) 25%, var(--vscode-input-background) 75%);
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ca-accent);
+  border: 2px solid color-mix(in srgb, var(--ca-accent) 70%, #fff 30%);
+  margin-top: -5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ca-accent) 25%, var(--vscode-input-background) 75%);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ca-accent);
+  border: 2px solid color-mix(in srgb, var(--ca-accent) 70%, #fff 30%);
 }
 
 .select {
@@ -130,8 +197,8 @@ select#voice {
 .select-btn {
   width: 100%;
   text-align: left;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  border-radius: var(--ca-radius-sm);
   border: 1px solid var(--vscode-input-border);
   background: var(--vscode-input-background);
   color: var(--vscode-input-foreground);
@@ -149,14 +216,14 @@ select#voice {
   z-index: 50;
   left: 0;
   right: 0;
-  margin-top: 4px;
-  border: 1px solid var(--vscode-dropdown-border);
-  background: var(--vscode-dropdown-background);
+  margin-top: 6px;
+  border: 1px solid var(--ca-border);
+  background: var(--ca-surface-2);
   color: var(--vscode-dropdown-foreground);
-  border-radius: 6px;
+  border-radius: var(--ca-radius-sm);
   max-height: 220px;
   overflow: auto;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
   display: none;
 }
 
@@ -168,16 +235,16 @@ select#voice {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 7px 10px;
   cursor: pointer;
 }
 
 .select-item:hover {
-  background: var(--vscode-list-hoverBackground);
+  background: color-mix(in srgb, var(--ca-accent) 18%, transparent 82%);
 }
 
 .select-item.is-selected {
-  background: var(--vscode-list-activeSelectionBackground);
+  background: color-mix(in srgb, var(--ca-accent) 30%, transparent 70%);
   color: var(--vscode-list-activeSelectionForeground);
 }
 
@@ -186,9 +253,9 @@ select#voice {
   align-items: center;
   justify-content: center;
   color: var(--vscode-charts-green);
-  width: 14px;
-  height: 14px;
-  flex: 0 0 14px;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
 }
 
 .speaker-icon svg {
@@ -212,16 +279,16 @@ select#voice {
 }
 
 .speaker.small {
-  width: 12px;
-  height: 12px;
-  line-height: 12px;
-  font-size: 12px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  font-size: 18px;
 }
 
 .speaker-icon.small {
-  width: 12px;
-  height: 12px;
-  flex: 0 0 12px;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
 }
 
 .mono {
