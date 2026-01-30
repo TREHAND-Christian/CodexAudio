@@ -69,6 +69,17 @@
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "-workbench.action.terminal.runRecentCommand",
+        "key": "ctrl+alt+r",
+        "when": "terminalFocus"
+      },
+      {
+        "command": "workbench.action.reloadWindow",
+        "key": "ctrl+alt+r"
+      }
+    ],
     "configuration": {
       "title": "CodexAudio",
       "properties": {

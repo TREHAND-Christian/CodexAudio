@@ -44,43 +44,62 @@ y
 "@ | code --install-extension $fixedPath --force | Out-Null
 
 Write-Host "-> Reload VS Code window..." -ForegroundColor Yellow
-$reloadArgs = @(".", "--reuse-window", "--command", "workbench.action.reloadWindow")
-if (-not $env:VSCODE_IPC_HOOK_CLI) {
-  try {
-    $codeCmd = (Get-Command code -ErrorAction Stop).Source
-    $codeRoot = Split-Path (Split-Path $codeCmd)
-    $shellIntegration = Join-Path $codeRoot "resources\\app\\out\\vs\\workbench\\contrib\\terminal\\common\\scripts\\shellIntegration.ps1"
-    if (Test-Path $shellIntegration) {
-      . $shellIntegration
-    }
-  } catch {
-    # ignore
+# Ensure Ctrl+Alt+R is bound to reload (and not captured by terminal)
+try {
+  $kbRoot = Join-Path $env:APPDATA "Code\\User"
+  if (-not (Test-Path $kbRoot)) {
+    $kbRoot = Join-Path $env:APPDATA "Code - Insiders\\User"
   }
+  $kbPath = Join-Path $kbRoot "keybindings.json"
+  if (Test-Path $kbRoot) {
+    $kb = @()
+    if (Test-Path $kbPath) {
+      $raw = Get-Content -Raw $kbPath
+      try {
+        $kb = @($raw | ConvertFrom-Json)
+      } catch {
+        $kb = $null
+      }
+    }
+    if ($kb -ne $null) {
+      $kb = @($kb | Where-Object {
+        -not (
+          ($_.key -eq "ctrl+alt+r") -and (
+            $_.command -eq "workbench.action.reloadWindow" -or
+            $_.command -eq "-workbench.action.terminal.runRecentCommand"
+          )
+        )
+      })
+      $kb += @{
+        key = "ctrl+alt+r"
+        command = "-workbench.action.terminal.runRecentCommand"
+        when = "terminalFocus"
+      }
+      $kb += @{
+        key = "ctrl+alt+r"
+        command = "workbench.action.reloadWindow"
+      }
+      $json = $kb | ConvertTo-Json -Depth 5
+      Set-Content -Path $kbPath -Value $json -Encoding UTF8
+    }
+  }
+} catch {
+  # ignore
 }
-Write-Host ("   [debug] VSCODE_IPC_HOOK_CLI=" + ($env:VSCODE_IPC_HOOK_CLI ?? "<not set>")) -ForegroundColor DarkGray
-Write-Host "   [debug] code . --reuse-window --command workbench.action.reloadWindow" -ForegroundColor DarkGray
-& code @reloadArgs | Out-Null
-if (-not $env:VSCODE_IPC_HOOK_CLI) {
-  # Fallback: send the exact command via Command Palette in the active VS Code window
-  Write-Host "   [debug] fallback: sending Ctrl+Shift+P -> 'Développeur : Recharger la fenêtre'" -ForegroundColor DarkGray
-  try {
-    Add-Type -AssemblyName System.Windows.Forms
-    $ws = New-Object -ComObject WScript.Shell
-    $vs = Get-Process Code -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle } | Select-Object -First 1
-    if ($vs) {
-      $null = $ws.AppActivate($vs.MainWindowTitle)
-    } else {
-      $null = $ws.AppActivate("Visual Studio Code")
-    }
-    Start-Sleep -Milliseconds 200
-    [System.Windows.Forms.SendKeys]::SendWait("^+p")
-    Start-Sleep -Milliseconds 200
-    [System.Windows.Forms.SendKeys]::SendWait("Développeur : Recharger la fenêtre")
-    Start-Sleep -Milliseconds 150
-    [System.Windows.Forms.SendKeys]::SendWait("{ENTER}")
-  } catch {
-    # ignore
+# Reload: simulate Ctrl+Alt+R inside VS Code
+try {
+  Add-Type -AssemblyName System.Windows.Forms
+  $ws = New-Object -ComObject WScript.Shell
+  $vs = Get-Process Code -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle } | Select-Object -First 1
+  if ($vs) {
+    $null = $ws.AppActivate($vs.MainWindowTitle)
+  } else {
+    $null = $ws.AppActivate("Visual Studio Code")
   }
+  Start-Sleep -Milliseconds 200
+  [System.Windows.Forms.SendKeys]::SendWait("^%r")
+} catch {
+  # ignore
 }
 
 Write-Host "OK." -ForegroundColor Green

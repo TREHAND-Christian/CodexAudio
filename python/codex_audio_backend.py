@@ -801,12 +801,13 @@ class TranslationWindow(QWidget):
         layout.addWidget(self.browser)
         self._restore_window_state()
 
-    def ensure_on_top(self) -> None:
+    def ensure_on_top(self, activate: bool = False) -> None:
         try:
             self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
             self.show()
             self.raise_()
-            self.activateWindow()
+            if activate:
+                self.activateWindow()
         except Exception:
             pass
 
@@ -903,7 +904,8 @@ class TranslationWindow(QWidget):
         super().resizeEvent(event)
 
     def showEvent(self, event) -> None:  # type: ignore[override]
-        self.ensure_on_top()
+        # Keep on top without stealing focus.
+        self.ensure_on_top(activate=False)
         try:
             _update_window_state("translation", {"visible": True})
         except Exception:
@@ -1401,12 +1403,13 @@ class MiniBar(QWidget):
         self.btn_text.clicked.connect(lambda: self._on_ui_cmd("openTranslation"))
         self._restore_window_state()
 
-    def ensure_on_top(self) -> None:
+    def ensure_on_top(self, activate: bool = False) -> None:
         try:
             self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
             self.show()
             self.raise_()
-            self.activateWindow()
+            if activate:
+                self.activateWindow()
         except Exception:
             pass
 
@@ -1581,7 +1584,8 @@ def main() -> int:
 
     translation = TranslationWindow(
         on_ui_cmd=on_ui_cmd2,
-        on_focus=lambda: minibar.ensure_on_top() if minibar.isVisible() else None,
+        # Keep minibar on top without stealing focus when translation gains focus.
+        on_focus=lambda: minibar.ensure_on_top(activate=False) if minibar.isVisible() else None,
     )
     translation.hide()
 
@@ -1691,7 +1695,7 @@ def main() -> int:
                 show = bool(params.get("show") is True)
                 if show:
                     translation.show()
-                    translation.ensure_on_top()
+                    translation.ensure_on_top(activate=False)
                 else:
                     translation.hide()
                 _response(req_id, True, {"ok": True})
@@ -1701,7 +1705,7 @@ def main() -> int:
                 show = bool(params.get("show") is True)
                 if show:
                     minibar.show()
-                    minibar.ensure_on_top()
+                    minibar.ensure_on_top(activate=False)
                 else:
                     minibar.hide()
                 _response(req_id, True, {"ok": True})
