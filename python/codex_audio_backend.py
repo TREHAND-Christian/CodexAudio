@@ -9,6 +9,8 @@ import time
 import html
 import textwrap
 import os
+import ctypes
+from ctypes import wintypes
 from pathlib import Path
 from urllib.parse import quote as _url_quote, unquote as _url_unquote
 from dataclasses import dataclass
@@ -312,6 +314,50 @@ def _escape_ssml(text: str) -> str:
         .replace('"', "&quot;")
         .replace("'", "&apos;")
     )
+
+
+def _is_rdp_foreground() -> bool:
+    if sys.platform != "win32":
+        return False
+    try:
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    except Exception:
+        return False
+
+    try:
+        hwnd = user32.GetForegroundWindow()
+        if not hwnd:
+            return False
+
+        class_buf = ctypes.create_unicode_buffer(256)
+        user32.GetClassNameW(hwnd, class_buf, 256)
+        class_name = class_buf.value or ""
+        if "TscShellContainerClass" in class_name:
+            return True
+
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        if not pid.value:
+            return False
+
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        hproc = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid.value)
+        if not hproc:
+            return False
+        try:
+            buf_len = wintypes.DWORD(512)
+            buf = ctypes.create_unicode_buffer(512)
+            if kernel32.QueryFullProcessImageNameW(hproc, 0, buf, ctypes.byref(buf_len)):
+                name = os.path.basename(buf.value).lower()
+                if name in {"mstsc.exe", "msrdc.exe", "remotedesktop.exe"}:
+                    return True
+        finally:
+            kernel32.CloseHandle(hproc)
+    except Exception:
+        return False
+
+    return False
 
 
 class TTSEngine:
@@ -758,8 +804,9 @@ class TranslationWindow(QWidget):
     def __init__(self, on_ui_cmd=None, on_focus=None):
         super().__init__()
         self.setWindowTitle("Fenêtre texte")
-        self.setWindowFlag(Qt.Tool, True)
-        self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+        self.setWindowFlag(Qt.Window, True)
+        self.setWindowFlag(Qt.WindowMinMaxButtonsHint, True)
+        self.setWindowFlag(Qt.WindowCloseButtonHint, True)
         self.setAttribute(Qt.WA_QuitOnClose, False)
         self.setMinimumSize(260, 260)
         layout = QVBoxLayout(self)
@@ -803,7 +850,6 @@ class TranslationWindow(QWidget):
 
     def ensure_on_top(self, activate: bool = False) -> None:
         try:
-            self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
             self.show()
             self.raise_()
             if activate:
@@ -1589,6 +1635,33 @@ def main() -> int:
     )
     translation.hide()
 
+    want_minibar_visible = False
+    want_translation_visible = False
+
+    def apply_visibility() -> None:
+        if _is_rdp_foreground():
+            if minibar.isVisible():
+                minibar.hide()
+            if translation.isVisible():
+                translation.hide()
+            return
+
+        if want_minibar_visible:
+            if not minibar.isVisible():
+                minibar.show()
+            minibar.ensure_on_top(activate=False)
+        else:
+            if minibar.isVisible():
+                minibar.hide()
+
+        if want_translation_visible:
+            if not translation.isVisible():
+                translation.show()
+            translation.ensure_on_top(activate=False)
+        else:
+            if translation.isVisible():
+                translation.hide()
+
     # Cache state sent by the extension to keep the minibar coherent.
     app_paused_state = False
     muted_state = False
@@ -1614,6 +1687,7 @@ def main() -> int:
     th.start()
 
     def handle(msg: dict) -> None:
+        nonlocal want_minibar_visible, want_translation_visible
         req_id = str(msg.get("id") or "")
         method = str(msg.get("method") or "")
         params = msg.get("params") or {}
@@ -1704,21 +1778,15 @@ def main() -> int:
                 if not isinstance(params, dict):
                     params = {}
                 show = bool(params.get("show") is True)
-                if show:
-                    translation.show()
-                    translation.ensure_on_top(activate=False)
-                else:
-                    translation.hide()
+                want_translation_visible = show
+                apply_visibility()
                 _response(req_id, True, {"ok": True})
             elif method == "show_minibar":
                 if not isinstance(params, dict):
                     params = {}
                 show = bool(params.get("show") is True)
-                if show:
-                    minibar.show()
-                    minibar.ensure_on_top(activate=False)
-                else:
-                    minibar.hide()
+                want_minibar_visible = show
+                apply_visibility()
                 _response(req_id, True, {"ok": True})
             elif method == "update_state":
                 if not isinstance(params, dict):
@@ -1747,6 +1815,11 @@ def main() -> int:
     timer.setInterval(50)
     timer.timeout.connect(drain_inbox)
     timer.start()
+
+    rdp_timer = QTimer()
+    rdp_timer.setInterval(500)
+    rdp_timer.timeout.connect(apply_visibility)
+    rdp_timer.start()
 
     return app.exec()
 

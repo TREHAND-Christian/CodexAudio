@@ -72,14 +72,14 @@ async function writeFileState(obj: Record<string, unknown>): Promise<void> {
 
 export async function loadState(ctx: vscode.ExtensionContext): Promise<AppState> {
   const fileObj = await readFileState();
-  const raw =
-    (fileObj?.extensionState as Partial<AppState> | undefined) ||
-    (fileObj as Partial<AppState> | undefined) ||
-    ctx.globalState.get<Partial<AppState>>(KEY);
-  if (fileObj == null && raw) {
-    const next: Record<string, unknown> = {};
-    next.extensionState = raw;
-    await writeFileState(next);
+  const raw = ctx.globalState.get<Partial<AppState>>(KEY);
+  if (raw && fileObj && typeof fileObj === "object" && (fileObj as any).extensionState) {
+    try {
+      delete (fileObj as any).extensionState;
+      await writeFileState(fileObj);
+    } catch {
+      // ignore
+    }
   }
   return {
     ...DEFAULT_STATE,
@@ -90,8 +90,5 @@ export async function loadState(ctx: vscode.ExtensionContext): Promise<AppState>
 }
 
 export async function saveState(ctx: vscode.ExtensionContext, state: AppState): Promise<void> {
-  const fileObj = (await readFileState()) || {};
-  fileObj.extensionState = state;
-  await writeFileState(fileObj);
   await ctx.globalState.update(KEY, state);
 }
