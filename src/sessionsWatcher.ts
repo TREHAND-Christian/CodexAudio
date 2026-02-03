@@ -6,7 +6,7 @@ import fg from "fast-glob";
 export type SessionsWatcherEvent =
   | { type: "log"; message: string }
   | { type: "file"; file: string }
-  | { type: "message"; text: string; key: string; source: "codex_sessions" };
+  | { type: "message"; text: string; key: string; source: "codex_sessions"; initial?: boolean };
 
 export type SessionsWatcherOptions = {
   pollIntervalMs: number;
@@ -202,7 +202,7 @@ export class CodexSessionsWatcher {
     }
     if (last && last.key !== this.lastEmittedKey) {
       this.lastEmittedKey = last.key;
-      this.onEvent({ type: "message", text: last.text, key: last.key, source: "codex_sessions" });
+      this.onEvent({ type: "message", text: last.text, key: last.key, source: "codex_sessions", initial: true });
     }
   }
 

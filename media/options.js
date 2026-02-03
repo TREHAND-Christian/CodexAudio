@@ -340,14 +340,14 @@
 
     const uiHasVoice = uiAvail === "available";
     const targetHasVoice = targetAvail === "available";
-    const disableTtsForTarget = !targetHasVoice || !uiHasVoice;
+    const disableTtsForTarget = !targetHasVoice;
     const pauseDisabled = !!s.appPaused;
     mute.disabled = disableTtsForTarget || pauseDisabled;
     voice.disabled = disableTtsForTarget || muted || pauseDisabled || voice.disabled;
     rate.disabled = disableTtsForTarget || muted || pauseDisabled;
     volume.disabled = disableTtsForTarget || muted || pauseDisabled;
     btnTest.disabled = disableTtsForTarget || muted || pauseDisabled;
-    autoRead.disabled = pauseDisabled || !uiHasVoice;
+    autoRead.disabled = pauseDisabled || !targetHasVoice;
     uiAnnouncements.disabled = pauseDisabled;
     barTop.disabled = pauseDisabled;
     barStart.disabled = pauseDisabled || !barTop.checked;

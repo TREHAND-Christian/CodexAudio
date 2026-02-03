@@ -19,9 +19,15 @@ type RpcRequest = { id: string; method: string; params?: unknown };
 type RpcResponse = { id: string; ok: boolean; result?: unknown; error?: string };
 type RpcEvent = { type: "event"; event: BackendEvent };
 
+type PendingRequest = {
+  resolve: (v: unknown) => void;
+  reject: (e: Error) => void;
+  timeout?: NodeJS.Timeout;
+};
+
 export class PythonBackendClient implements vscode.Disposable {
   private proc: cp.ChildProcessWithoutNullStreams | undefined;
-  private pending = new Map<string, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+  private pending = new Map<string, PendingRequest>();
   private readonly disposables: vscode.Disposable[] = [];
   private readonly onEventCb: (evt: BackendEvent) => void;
 
@@ -38,6 +44,24 @@ export class PythonBackendClient implements vscode.Disposable {
     this.stop();
     if (!pythonPath || !pythonPath.trim()) {
       throw new Error("Chemin Python vide.");
+    }
+
+    if (process.platform === "win32") {
+      try {
+        const scriptNeedle = "codex_audio_backend.py";
+        const ps = [
+          "$ErrorActionPreference='SilentlyContinue'",
+          `$needle='${scriptNeedle}'`,
+          "Get-CimInstance Win32_Process",
+          "| Where-Object { $_.CommandLine -and ($_.CommandLine -like ('*' + $needle + '*')) }",
+          "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
+        ].join("; ");
+        cp.spawnSync("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps], {
+          windowsHide: true,
+        });
+      } catch {
+        // ignore
+      }
     }
     const script = path.join(extensionPath, "python", "codex_audio_backend.py");
     this.proc = cp.spawn(pythonPath, [script], {
@@ -61,6 +85,7 @@ export class PythonBackendClient implements vscode.Disposable {
       if (message) this.onEventCb({ type: "log", message });
       this.onEventCb({ type: "backend_exit", code, signal });
       for (const [id, p] of this.pending.entries()) {
+        if (p.timeout) clearTimeout(p.timeout);
         p.reject(new Error(`Python backend exited (id=${id})`));
       }
       this.pending.clear();
@@ -80,12 +105,39 @@ export class PythonBackendClient implements vscode.Disposable {
 
   stop(): void {
     if (!this.proc) return;
+    const pid = this.proc.pid;
     try {
-      this.proc.kill();
+      if (process.platform === "win32" && typeof pid === "number" && pid > 0) {
+        try {
+          cp.spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { windowsHide: true });
+        } catch {
+          // ignore
+        }
+        try {
+          const scriptNeedle = "codex_audio_backend.py";
+          const ps = [
+            "$ErrorActionPreference='SilentlyContinue'",
+            `$needle='${scriptNeedle}'`,
+            "Get-CimInstance Win32_Process",
+            "| Where-Object { $_.CommandLine -and ($_.CommandLine -like ('*' + $needle + '*')) }",
+            "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
+          ].join("; ");
+          cp.spawnSync("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps], {
+            windowsHide: true,
+          });
+        } catch {
+          // ignore
+        }
+      } else {
+        this.proc.kill();
+      }
     } catch {
       // ignore
     }
     this.proc = undefined;
+    for (const p of this.pending.values()) {
+      if (p.timeout) clearTimeout(p.timeout);
+    }
     this.pending.clear();
   }
 
@@ -99,7 +151,17 @@ export class PythonBackendClient implements vscode.Disposable {
     const req: RpcRequest = { id, method, params };
     const payload = JSON.stringify(req);
     const p = new Promise<T>((resolve, reject) => {
-      this.pending.set(id, { resolve: resolve as unknown as (v: unknown) => void, reject });
+      const timeout = setTimeout(() => {
+        const entry = this.pending.get(id);
+        if (!entry) return;
+        this.pending.delete(id);
+        entry.reject(new Error(`Timeout backend (${method})`));
+      }, 15000);
+      this.pending.set(id, {
+        resolve: resolve as unknown as (v: unknown) => void,
+        reject,
+        timeout,
+      });
     });
     this.proc.stdin.write(payload + "\n");
     return p;
@@ -120,6 +182,7 @@ export class PythonBackendClient implements vscode.Disposable {
       const p = this.pending.get(msg.id);
       if (!p) return;
       this.pending.delete(msg.id);
+      if (p.timeout) clearTimeout(p.timeout);
       if (msg.ok) p.resolve(msg.result);
       else p.reject(new Error(msg.error || "Erreur backend Python"));
       return;
