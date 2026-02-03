@@ -36,6 +36,9 @@ export class PythonBackendClient implements vscode.Disposable {
 
   start(pythonPath: string, extensionPath: string): void {
     this.stop();
+    if (!pythonPath || !pythonPath.trim()) {
+      throw new Error("Chemin Python vide.");
+    }
     const script = path.join(extensionPath, "python", "codex_audio_backend.py");
     this.proc = cp.spawn(pythonPath, [script], {
       stdio: ["pipe", "pipe", "pipe"],
@@ -54,15 +57,24 @@ export class PythonBackendClient implements vscode.Disposable {
       if (msg) this.onEventCb({ type: "log", message: `[py] ${msg}` });
     });
 
-    this.proc.on("exit", (code, signal) => {
-      this.onEventCb({ type: "log", message: `[py] exit code=${code} signal=${signal ?? ""}` });
-      this.onEventCb({ type: "backend_exit", code: code ?? null, signal: signal ?? null });
+    const cleanup = (code: number | null, signal: string | null, message?: string): void => {
+      if (message) this.onEventCb({ type: "log", message });
+      this.onEventCb({ type: "backend_exit", code, signal });
       for (const [id, p] of this.pending.entries()) {
         p.reject(new Error(`Python backend exited (id=${id})`));
       }
       this.pending.clear();
       rl.close();
       this.proc = undefined;
+    };
+
+    this.proc.on("error", (err) => {
+      cleanup(null, null, `[py] spawn error: ${String(err)}`);
+      this.onEventCb({ type: "error", message: `Backend Python introuvable ou invalide: ${String(err)}` });
+    });
+
+    this.proc.on("exit", (code, signal) => {
+      cleanup(code ?? null, signal ?? null, `[py] exit code=${code} signal=${signal ?? ""}`);
     });
   }
 

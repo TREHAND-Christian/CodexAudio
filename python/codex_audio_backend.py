@@ -1589,6 +1589,11 @@ def main() -> int:
     )
     translation.hide()
 
+    # Cache state sent by the extension to keep the minibar coherent.
+    app_paused_state = False
+    muted_state = False
+    playing_state = False
+
     # No UI callbacks (highlighting removed).
 
     inbox: "Queue[dict]" = Queue()
@@ -1660,23 +1665,29 @@ def main() -> int:
                     "volume": float(params.get("volume") or 80.0),
                 }
                 tts.speak_queue(queue, cfg)
+                app_paused_state = bool(params.get("app_paused") is True)
+                muted_state = bool(params.get("muted") is True)
+                playing_state = True
                 minibar.set_state(
-                    app_paused=bool(params.get("app_paused") is True),
-                    muted=bool(params.get("muted") is True),
-                    playing=True,
+                    app_paused=app_paused_state,
+                    muted=muted_state,
+                    playing=playing_state,
                 )
                 _response(req_id, True, {"ok": True})
             elif method == "stop":
                 tts.stop()
-                minibar.set_state(app_paused=False, muted=False, playing=False)
+                playing_state = False
+                minibar.set_state(app_paused=app_paused_state, muted=muted_state, playing=playing_state)
                 _response(req_id, True, {"ok": True})
             elif method == "pause":
                 tts.pause()
-                minibar.set_state(app_paused=False, muted=False, playing=False)
+                playing_state = False
+                minibar.set_state(app_paused=app_paused_state, muted=muted_state, playing=playing_state)
                 _response(req_id, True, {"ok": True})
             elif method == "resume":
                 tts.resume()
-                minibar.set_state(app_paused=False, muted=False, playing=True)
+                playing_state = True
+                minibar.set_state(app_paused=app_paused_state, muted=muted_state, playing=playing_state)
                 _response(req_id, True, {"ok": True})
             elif method == "set_translation":
                 if not isinstance(params, dict):
@@ -1712,11 +1723,10 @@ def main() -> int:
             elif method == "update_state":
                 if not isinstance(params, dict):
                     params = {}
-                minibar.set_state(
-                    app_paused=bool(params.get("app_paused") is True),
-                    muted=bool(params.get("muted") is True),
-                    playing=bool(params.get("playing") is True),
-                )
+                app_paused_state = bool(params.get("app_paused") is True)
+                muted_state = bool(params.get("muted") is True)
+                playing_state = bool(params.get("playing") is True)
+                minibar.set_state(app_paused=app_paused_state, muted=muted_state, playing=playing_state)
                 _response(req_id, True, {"ok": True})
             else:
                 _response(req_id, False, error=f"Unknown method: {method}")
