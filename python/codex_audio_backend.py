@@ -807,6 +807,7 @@ class TranslationWindow(QWidget):
         self.setWindowFlag(Qt.Window, True)
         self.setWindowFlag(Qt.WindowMinMaxButtonsHint, True)
         self.setWindowFlag(Qt.WindowCloseButtonHint, True)
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
         self.setAttribute(Qt.WA_QuitOnClose, False)
         self.setMinimumSize(260, 260)
         layout = QVBoxLayout(self)
@@ -850,6 +851,7 @@ class TranslationWindow(QWidget):
 
     def ensure_on_top(self, activate: bool = False) -> None:
         try:
+            self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
             self.show()
             self.raise_()
             if activate:
@@ -1637,8 +1639,11 @@ def main() -> int:
 
     want_minibar_visible = False
     want_translation_visible = False
+    last_minibar_visible = None
+    last_translation_visible = None
 
     def apply_visibility() -> None:
+        nonlocal last_minibar_visible, last_translation_visible
         if _is_rdp_foreground():
             if minibar.isVisible():
                 minibar.hide()
@@ -1649,7 +1654,6 @@ def main() -> int:
         if want_minibar_visible:
             if not minibar.isVisible():
                 minibar.show()
-            minibar.ensure_on_top(activate=False)
         else:
             if minibar.isVisible():
                 minibar.hide()
@@ -1657,10 +1661,26 @@ def main() -> int:
         if want_translation_visible:
             if not translation.isVisible():
                 translation.show()
-            translation.ensure_on_top(activate=False)
         else:
             if translation.isVisible():
                 translation.hide()
+
+        minibar_vis = minibar.isVisible()
+        translation_vis = translation.isVisible()
+
+        if last_translation_visible is None or translation_vis != last_translation_visible:
+            if translation_vis:
+                translation.ensure_on_top(activate=False)
+            last_translation_visible = translation_vis
+
+        if last_minibar_visible is None or minibar_vis != last_minibar_visible:
+            if minibar_vis:
+                minibar.ensure_on_top(activate=False)
+            last_minibar_visible = minibar_vis
+
+        if translation_vis and minibar_vis:
+            # Keep the minibar above the translation window without spamming raise/show.
+            minibar.ensure_on_top(activate=False)
 
     # Cache state sent by the extension to keep the minibar coherent.
     app_paused_state = False
