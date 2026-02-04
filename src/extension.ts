@@ -72,6 +72,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   await startBackend();
   await refreshBackendInfo();
+  // Show startup windows immediately when the user enabled "on start".
+  runtime.deferStartupWindows = !(
+    runtime.state.showMiniBarOnStart || runtime.state.showTranslationOnStart
+  );
   if (runtime.backendOk) {
     const beforeVoice = runtime.state.ttsVoiceId;
     applyVoiceForCurrentLang();
@@ -205,6 +209,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           label: runtime.state.lastTranslationLabel || runtime.state.targetLang,
           text: runtime.state.lastDisplayText,
           queue: q,
+          is_initial: true,
         });
       } catch {
         // ignore
@@ -437,11 +442,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     const showTextWindow = runtime.state.showTranslationWindow;
     try {
-        await backend.request("set_translation", {
-          label,
-          text: displayText,
-          queue: normalizedQueue,
-        });
+      await backend.request("set_translation", {
+        label,
+        text: displayText,
+        queue: normalizedQueue,
+        is_initial: isInitial === true,
+      });
       await backend.request("show_translation", { show: showTextWindow });
     } catch {
       // ignore
@@ -596,6 +602,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
               label,
               text: displayText,
               queue: normalizedQueue,
+              is_initial: false,
             });
           } catch {
             // ignore
