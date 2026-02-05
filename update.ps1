@@ -27,7 +27,7 @@ if ($VsixPath) {
   }
   Copy-Item -Force $VsixPath $fixedPath
 } else {
-  & npx @vscode/vsce package --no-dependencies -o $fixedPath | Out-Null
+  & npx @vscode/vsce package --no-dependencies --allow-missing-repository -o $fixedPath | Out-Null
 }
 
 if (-not (Test-Path $fixedPath)) {

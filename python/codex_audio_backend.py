@@ -985,6 +985,17 @@ def main() -> int:
     if QApplication is None or Qt is None:
         _event({"type": "error", "message": "PySide6 indisponible (UI flottante non disponible)."})
         return 1
+    expected = os.environ.get("CODEXAUDIO_EXPECTED_PYTHON", "").strip()
+    if expected:
+        try:
+            cur = os.path.normcase(os.path.abspath(sys.executable))
+            exp = os.path.normcase(os.path.abspath(expected))
+            if cur != exp:
+                _event({"type": "error", "message": f"Python inattendu: {cur} (attendu: {exp})"})
+                return 1
+        except Exception:
+            # If comparison fails, continue.
+            pass
 
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)

@@ -69,6 +69,7 @@ export class PythonBackendClient implements vscode.Disposable {
       windowsHide: true,
       env: {
         ...process.env,
+        CODEXAUDIO_EXPECTED_PYTHON: pythonPath,
         PYTHONIOENCODING: "utf-8",
         PYTHONUTF8: "1",
       },

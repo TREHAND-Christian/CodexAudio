@@ -165,6 +165,8 @@ class TranslationWindow(QWidget):
             if self._show_logo_on_next_show:
                 self._wait_for_fresh = True
                 self._skip_first_render = True
+                # Ignore any already-received text (initial sync) while logo is shown.
+                self._rendered_seq = self._pending_seq
                 self._render_logo()
                 self._show_logo_on_next_show = False
             else:
@@ -240,7 +242,7 @@ class TranslationWindow(QWidget):
                 self._skip_first_render = False
                 return
             if self._wait_for_fresh:
-                if self._pending_seq > self._rendered_seq:
+                if (not is_initial) and self._pending_seq > self._rendered_seq:
                     self._wait_for_fresh = False
             if not self._wait_for_fresh:
                 self._render()
@@ -295,6 +297,14 @@ class TranslationWindow(QWidget):
         except Exception:
             pass
         super().hideEvent(event)
+
+    def closeEvent(self, event) -> None:  # type: ignore[override]
+        try:
+            if self._on_ui_cmd:
+                self._on_ui_cmd("translationClosed")
+        except Exception:
+            pass
+        super().closeEvent(event)
 
     def _restore_window_state(self) -> None:
         data = self._state_fns.read_state() if self._state_fns else {}
@@ -373,7 +383,17 @@ class TranslationWindow(QWidget):
         try:
             return md.markdown(
                 text,
-                extensions=["fenced_code", "tables", "sane_lists", "nl2br"],
+                extensions=[
+                    "fenced_code",
+                    "tables",
+                    "sane_lists",
+                    "nl2br",
+                    "pymdownx.tilde",
+                    "pymdownx.tasklist",
+                ],
+                extension_configs={
+                    "pymdownx.tasklist": {"custom_checkbox": True},
+                },
                 output_format="html5",
             )
         except Exception:

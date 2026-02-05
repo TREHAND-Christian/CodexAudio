@@ -85,7 +85,7 @@
       "properties": {
         "codexAudio.pythonPath": {
           "type": "string",
-          "default": "C:\\\\Users\\\\treha\\\\Desktop\\\\CodexAudio\\\\.venv\\\\Scripts\\\\python.exe",
+          "default": "${workspaceFolder}\\\\.venv\\\\Scripts\\\\python.exe",
           "description": "Chemin vers python.exe (venv) utilisé pour TTS/Traduction."
         },
         "codexAudio.pollIntervalMs": {

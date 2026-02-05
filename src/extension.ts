@@ -178,7 +178,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   async function startBackend(): Promise<void> {
-    const pythonPath = getCfgString("pythonPath", "");
+    const pythonPath = resolvePathPlaceholders(getCfgString("pythonPath", ""));
     try {
       backend.start(pythonPath, context.extensionPath);
       runtime.backendOk = true;
@@ -331,6 +331,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
       if (evt.cmd === "openTranslation") {
         void vscode.commands.executeCommand("codexAudio.openTranslation");
+        return;
+      }
+      if (evt.cmd === "translationClosed") {
+        runtime.state.showTranslationWindow = false;
+        runtime.state.showTranslationOnStart = false;
+        void persistAndRefresh();
         return;
       }
       if (evt.cmd === "openFile") {
@@ -837,6 +843,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
   function getCfgBool(key: string, def: boolean): boolean {
     return vscode.workspace.getConfiguration("codexAudio").get<boolean>(key, def);
+  }
+
+  function resolvePathPlaceholders(raw: string): string {
+    let out = String(raw || "");
+    if (!out) return out;
+    if (out.includes("${workspaceFolder}")) {
+      const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
+      if (folder) out = out.replaceAll("${workspaceFolder}", folder);
+    }
+    return out;
   }
 
   async function maybeShowDeferredWindows(): Promise<void> {
