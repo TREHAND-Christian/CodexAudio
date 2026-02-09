@@ -97,12 +97,20 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
       </label>
       <label class="row">
         <span id="lblRateCaption">Vitesse :</span>
-        <input type="range" id="rate" min="50" max="200" step="5" />
+        <div class="range-wrap">
+          <button id="rateDec" class="range-btn" type="button">-</button>
+          <input type="range" id="rate" min="50" max="200" step="5" />
+          <button id="rateInc" class="range-btn" type="button">+</button>
+        </div>
         <span id="rateVal" class="mono"></span>
       </label>
       <label class="row">
         <span id="lblVolCaption">Volume :</span>
-        <input type="range" id="volume" min="0" max="100" step="1" />
+        <div class="range-wrap">
+          <button id="volDec" class="range-btn" type="button">-</button>
+          <input type="range" id="volume" min="0" max="100" step="1" />
+          <button id="volInc" class="range-btn" type="button">+</button>
+        </div>
         <span id="volVal" class="mono"></span>
       </label>
       <div class="footer">

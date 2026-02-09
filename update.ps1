@@ -86,7 +86,7 @@ try {
 } catch {
   # ignore
 }
-# Reload: simulate Ctrl+Alt+R inside VS Code
+# Reload: wait a bit so the correct session/cwd is ready, then simulate Ctrl+Alt+R
 try {
   Add-Type -AssemblyName System.Windows.Forms
   $ws = New-Object -ComObject WScript.Shell
@@ -96,7 +96,7 @@ try {
   } else {
     $null = $ws.AppActivate("Visual Studio Code")
   }
-  Start-Sleep -Milliseconds 200
+  Start-Sleep -Milliseconds 1200
   [System.Windows.Forms.SendKeys]::SendWait("^%r")
 } catch {
   # ignore

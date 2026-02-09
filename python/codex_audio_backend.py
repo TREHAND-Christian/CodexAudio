@@ -378,6 +378,8 @@ class TTSEngine:
         self._cfg: dict[str, Any] = {}
         self._next_queue: list[str] = []
         self._next_cfg: dict[str, Any] = {}
+        self._after_queue: list[str] = []
+        self._after_cfg: dict[str, Any] = {}
         self._on_sentence = None
         self._on_started = None
         self._on_finished = None
@@ -456,6 +458,8 @@ class TTSEngine:
             self._restart_pending = False
             self._next_queue = []
             self._next_cfg = {}
+            self._after_queue = []
+            self._after_cfg = {}
             t = self._thread
             if t is not None and t.is_alive():
                 return
@@ -504,6 +508,22 @@ class TTSEngine:
             self._next_queue = []
             self._next_cfg = {}
         self._start_queue(self._cfg)
+
+    def speak_after(self, queue: list[str], cfg: dict[str, Any]) -> None:
+        if not queue:
+            return
+        with self._lock:
+            t = self._thread
+            if t is not None and t.is_alive():
+                # Queue after current playback without interrupting.
+                if self._after_queue:
+                    self._after_queue.extend(list(queue))
+                else:
+                    self._after_queue = list(queue)
+                    self._after_cfg = dict(cfg or {})
+                _event({"type": "log", "message": "tts_after_queued"})
+                return
+        self.speak_queue(queue, cfg)
 
     def _start_queue(self, cfg: dict[str, Any]) -> None:
         if SpeechSynthesizer is None or media_core is None or media_playback is None:
@@ -577,6 +597,13 @@ class TTSEngine:
                         self._queue_index = 0
                         self._next_queue = []
                         self._next_cfg = {}
+                        if self._after_queue:
+                            self._queue = self._after_queue
+                            self._queue_index = 0
+                            self._cfg = self._after_cfg
+                            self._after_queue = []
+                            self._after_cfg = {}
+                            restart = True
 
                     resume = self._resume_pending and bool(self._queue)
                     if resume:
@@ -1154,6 +1181,21 @@ def main() -> int:
                     muted=muted_state,
                     playing=playing_state,
                 )
+                _response(req_id, True, {"ok": True})
+            elif method == "speak_after":
+                if not isinstance(params, dict):
+                    params = {}
+                queue = params.get("queue")
+                if not isinstance(queue, list):
+                    queue = []
+                queue = [str(x) for x in queue if str(x).strip()]
+                _safe_log(f"[tts] speak_after received n={len(queue)}")
+                cfg = {
+                    "voice_id": str(params.get("voice_id") or ""),
+                    "rate": float(params.get("rate") or 1.0),
+                    "volume": float(params.get("volume") or 80.0),
+                }
+                tts.speak_after(queue, cfg)
                 _response(req_id, True, {"ok": True})
             elif method == "stop":
                 tts.stop()

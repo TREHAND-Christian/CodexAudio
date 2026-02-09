@@ -240,9 +240,10 @@ class TranslationWindow(QWidget):
         if self._visible:
             if self._skip_first_render and is_initial:
                 self._skip_first_render = False
-                return
+                if self._pending_seq > self._rendered_seq:
+                    self._wait_for_fresh = False
             if self._wait_for_fresh:
-                if (not is_initial) and self._pending_seq > self._rendered_seq:
+                if self._pending_seq > self._rendered_seq:
                     self._wait_for_fresh = False
             if not self._wait_for_fresh:
                 self._render()
@@ -465,11 +466,35 @@ class TranslationWindow(QWidget):
         return "\n".join(html_lines)
 
     def _inline_code(self, text: str) -> str:
-        def repl(m):
-            return f"<code>{html.escape(m.group(1))}</code>"
+        if not text:
+            return ""
 
-        escaped = html.escape(text or "")
-        return re.sub(r"`([^`]+)`", repl, escaped)
+        code_spans: list[str] = []
+
+        def repl_code(m):
+            code_spans.append(html.escape(m.group(1)))
+            return f"%%CODESPAN{len(code_spans) - 1}%%"
+
+        tmp = re.sub(r"`([^`]+)`", repl_code, text)
+        escaped = html.escape(tmp)
+
+        def repl_bold(m):
+            return f"<strong>{m.group(1)}</strong>"
+
+        def repl_em(m):
+            return f"<em>{m.group(1)}</em>"
+
+        escaped = re.sub(r"\*\*(.+?)\*\*", repl_bold, escaped)
+        escaped = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", repl_em, escaped)
+        escaped = re.sub(r"(?<!_)_(?!_)(.+?)(?<!_)_(?!_)", repl_em, escaped)
+
+        def restore_code(m):
+            idx = int(m.group(1))
+            if 0 <= idx < len(code_spans):
+                return f"<code>{code_spans[idx]}</code>"
+            return ""
+
+        return re.sub(r"%%CODESPAN(\d+)%%", restore_code, escaped)
 
     def _wrap_code_blocks(self, html_text: str) -> str:
         if not html_text:

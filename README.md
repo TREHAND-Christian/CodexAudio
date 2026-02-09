@@ -14,6 +14,5 @@ CodexAudio lit à voix haute les réponses du modèle (via les fichiers `~/.code
 ## Prérequis
 
 - Windows 10/11
-- Python 3.12 + venv : `C:\Users\treha\Desktop\CodexAudio\.venv`
+- Python 3.12 + venv : `C:\Users\treha\Desktop\CodexAudioNew\.venv`
 - Les dépendances Python sont listées dans `requirements.txt`.
-

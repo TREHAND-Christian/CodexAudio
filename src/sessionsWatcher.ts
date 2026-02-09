@@ -16,6 +16,7 @@ export type SessionsWatcherOptions = {
   scrubMinIntervalMs: number;
   pattern: string;
   scrubKeys: string[];
+  workspaceRoot?: string;
 };
 
 const DEFAULT_SCRUB_KEYS = [
@@ -35,6 +36,7 @@ export class CodexSessionsWatcher {
 
   private timer: NodeJS.Timeout | undefined;
   private currentFile: string | undefined;
+  private currentFileCwd: string | undefined;
   private pos = 0;
   private lastEmittedKey = "";
   private lastScrubAt = 0;
@@ -82,7 +84,7 @@ export class CodexSessionsWatcher {
     return path.join(home, ".codex", "sessions");
   }
 
-  private async findLatestRollout(): Promise<string | undefined> {
+  private async findLatestRollout(): Promise<{ file: string; last?: { text: string; key: string } } | undefined> {
     const root = this.sessionsRoot();
     try {
       await fsp.access(root);
@@ -97,22 +99,93 @@ export class CodexSessionsWatcher {
       suppressErrors: true,
     });
     if (files.length === 0) return undefined;
-
-    let best = files[0]!;
-    let bestMtime = 0;
+    let best: { file: string; last?: { text: string; key: string; cwd?: string }; ts: number } | undefined;
     for (const file of files) {
       try {
         const st = await fsp.stat(file);
-        const m = st.mtimeMs || 0;
-        if (m >= bestMtime) {
-          bestMtime = m;
-          best = file;
+        const last = await this.readLastAssistantInFile(file);
+        const ts = last?.ts ?? st.mtimeMs ?? 0;
+        if (this.opts.workspaceRoot && !last) {
+          // No matching message for this workspace, skip.
+          continue;
+        }
+        if (!best || ts >= best.ts) {
+          best = { file, last: last ? { text: last.text, key: last.key, cwd: last.cwd } : undefined, ts };
         }
       } catch {
         // ignore
       }
     }
-    return best;
+    return best ? { file: best.file, last: best.last } : undefined;
+  }
+
+  private parseTimestamp(obj: Record<string, unknown>): number | null {
+    const raw = obj.timestamp;
+    if (typeof raw === "string") {
+      const t = Date.parse(raw);
+      if (!Number.isNaN(t)) return t;
+    }
+    return null;
+  }
+
+  private normalizePath(p: string): string {
+    return String(p || "")
+      .replace(/\//g, "\\")
+      .trim()
+      .toLowerCase();
+  }
+
+  private matchesWorkspace(cwd: string | undefined): boolean {
+    const root = this.opts.workspaceRoot;
+    if (!root) return true;
+    if (!cwd) return false;
+    const a = this.normalizePath(cwd);
+    const b = this.normalizePath(root);
+    return a === b || a.startsWith(b + "\\");
+  }
+
+  private async readLastAssistantInFile(
+    file: string,
+  ): Promise<{ text: string; key: string; ts: number; cwd?: string } | undefined> {
+    try {
+      const st = await fsp.stat(file);
+      const size = st.size || 0;
+      const tailSize = Math.min(size, 2_000_000);
+      const start = Math.max(0, size - tailSize);
+      const fd = await fsp.open(file, "r");
+      try {
+        const buf = Buffer.alloc(size - start);
+        await fd.read(buf, 0, buf.length, start);
+        const text = buf.toString("utf8");
+        const lines = text.split(/\r?\n/g);
+        let last: { text: string; key: string; ts: number; cwd?: string } | undefined;
+        let currentCwd: string | undefined;
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const obj = JSON.parse(trimmed) as Record<string, unknown>;
+            if (obj.type === "turn_context" && obj.payload && typeof obj.payload === "object") {
+              const p = obj.payload as Record<string, unknown>;
+              if (typeof p.cwd === "string") currentCwd = p.cwd;
+            }
+            const res = this.extractAssistantText(obj);
+            if (res) {
+              if (!this.matchesWorkspace(currentCwd)) continue;
+              const ts = this.parseTimestamp(obj) ?? st.mtimeMs ?? 0;
+              last = { text: res.text, key: res.key, ts, cwd: currentCwd };
+            }
+          } catch {
+            // ignore
+          }
+        }
+        return last;
+      } finally {
+        await fd.close();
+      }
+    } catch {
+      return undefined;
+    }
   }
 
   private payloadToText(payload: unknown): string {
@@ -210,16 +283,28 @@ export class CodexSessionsWatcher {
     const latest = await this.findLatestRollout();
     if (!latest) return;
 
-    if (latest !== this.currentFile) {
-      this.currentFile = latest;
-      this.onEvent({ type: "file", file: latest });
-      await this.primeLastMessage(latest);
+    if (latest.file !== this.currentFile) {
+      this.currentFile = latest.file;
+      this.currentFileCwd = latest.last?.cwd;
+      this.onEvent({ type: "file", file: latest.file });
+      if (latest.last && latest.last.key !== this.lastEmittedKey) {
+        this.lastEmittedKey = latest.last.key;
+        this.onEvent({
+          type: "message",
+          text: latest.last.text,
+          key: latest.last.key,
+          source: "codex_sessions",
+          initial: true,
+        });
+      } else {
+        await this.primeLastMessage(latest.file);
+      }
       if (this.opts.scrubTtsFields) {
         this.scrubPending = true;
-        await this.maybeScrubFile(latest);
+        await this.maybeScrubFile(latest.file);
       }
       try {
-        const st = await fsp.stat(latest);
+        const st = await fsp.stat(latest.file);
         this.pos = st.size;
       } catch {
         this.pos = 0;
@@ -246,8 +331,19 @@ export class CodexSessionsWatcher {
             if (!trimmed) continue;
             try {
               const obj = JSON.parse(trimmed) as unknown;
+              if (
+                obj &&
+                typeof obj === "object" &&
+                (obj as any).type === "turn_context" &&
+                (obj as any).payload &&
+                typeof (obj as any).payload === "object" &&
+                typeof (obj as any).payload.cwd === "string"
+              ) {
+                this.currentFileCwd = String((obj as any).payload.cwd);
+              }
               const res = this.extractAssistantText(obj);
               if (res && res.key !== this.lastEmittedKey) {
+                if (!this.matchesWorkspace(this.currentFileCwd)) continue;
                 this.lastEmittedKey = res.key;
                 this.onEvent({ type: "message", text: res.text, key: res.key, source: "codex_sessions" });
               }

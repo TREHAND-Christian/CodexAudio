@@ -262,7 +262,11 @@
   const targetLangSelect = byId("targetLangSelect");
   const voice = byId("voice");
   const rate = byId("rate");
+  const rateDec = byId("rateDec");
+  const rateInc = byId("rateInc");
   const volume = byId("volume");
+  const volDec = byId("volDec");
+  const volInc = byId("volInc");
   const translate = byId("translate");
   const lblTranslate = byId("lblTranslate");
   const btnTest = byId("btnTest");
@@ -304,8 +308,8 @@
     const tr = UI_TRANSLATIONS[String(s.uiLang || "fr").toLowerCase()] || UI_TRANSLATIONS.fr;
     lblTranslate.textContent = translateAvailable ? tr.translate : tr.translate_off;
     translate.checked = translateAvailable && !!s.translateEnabled;
-    barStart.disabled = !!s.appPaused || !barTop.checked;
-    showTextStart.disabled = !!s.appPaused || !showText.checked;
+    barStart.disabled = !!s.appPaused;
+    showTextStart.disabled = !!s.appPaused;
 
     const targetDisabled = !(translateAvailable && translate.checked) || !!s.appPaused;
     renderLangSelect(
@@ -346,13 +350,13 @@
     voice.disabled = disableTtsForTarget || muted || pauseDisabled || voice.disabled;
     rate.disabled = disableTtsForTarget || muted || pauseDisabled;
     volume.disabled = disableTtsForTarget || muted || pauseDisabled;
-    btnTest.disabled = disableTtsForTarget || muted || pauseDisabled;
+    btnTest.disabled = pauseDisabled;
     autoRead.disabled = pauseDisabled || !targetHasVoice;
     uiAnnouncements.disabled = pauseDisabled;
     barTop.disabled = pauseDisabled;
-    barStart.disabled = pauseDisabled || !barTop.checked;
+    barStart.disabled = pauseDisabled;
     showText.disabled = pauseDisabled;
-    showTextStart.disabled = pauseDisabled || !showText.checked;
+    showTextStart.disabled = pauseDisabled;
   }
 
   const LANG_OPTIONS = [
@@ -560,19 +564,44 @@
   // targetLang handled by custom dropdown
   voice.addEventListener("change", () => postPatchWithAnnounce({ ttsVoiceId: voice.value }, "voice", true));
 
-  rate.addEventListener("input", () => {
-    rateVal.textContent = `${rate.value}%`;
-    postPatchWithAnnounce({ ttsRate: Math.max(0.5, Math.min(2.0, Number(rate.value) / 100)) }, "rate", false);
+  function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function applyRate(announce) {
+    const v = clamp(Number(rate.value), 50, 200);
+    rate.value = String(v);
+    rateVal.textContent = `${v}%`;
+    postPatchWithAnnounce({ ttsRate: Math.max(0.5, Math.min(2.0, v / 100)) }, "rate", !!announce);
+  }
+
+  function applyVolume(announce) {
+    const v = clamp(Number(volume.value), 0, 100);
+    volume.value = String(v);
+    volVal.textContent = `${v}%`;
+    postPatchWithAnnounce({ ttsVolume: v }, "volume", !!announce);
+  }
+
+  rate.addEventListener("input", () => applyRate(false));
+  rate.addEventListener("change", () => applyRate(true));
+  volume.addEventListener("input", () => applyVolume(false));
+  volume.addEventListener("change", () => applyVolume(true));
+
+  rateDec.addEventListener("click", () => {
+    rate.value = String(Number(rate.value || 100) - 5);
+    applyRate(true);
   });
-  rate.addEventListener("change", () => {
-    postPatchWithAnnounce({ ttsRate: Math.max(0.5, Math.min(2.0, Number(rate.value) / 100)) }, "rate", true);
+  rateInc.addEventListener("click", () => {
+    rate.value = String(Number(rate.value || 100) + 5);
+    applyRate(true);
   });
-  volume.addEventListener("input", () => {
-    volVal.textContent = `${volume.value}%`;
-    postPatchWithAnnounce({ ttsVolume: Math.max(0, Math.min(100, Number(volume.value))) }, "volume", false);
+  volDec.addEventListener("click", () => {
+    volume.value = String(Number(volume.value || 80) - 5);
+    applyVolume(true);
   });
-  volume.addEventListener("change", () => {
-    postPatchWithAnnounce({ ttsVolume: Math.max(0, Math.min(100, Number(volume.value))) }, "volume", true);
+  volInc.addEventListener("click", () => {
+    volume.value = String(Number(volume.value || 80) + 5);
+    applyVolume(true);
   });
 
   window.addEventListener("message", (event) => {

@@ -1,3 +1,5 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import * as vscode from "vscode";
 import { CodexSessionsWatcher, type SessionsWatcherEvent } from "./sessionsWatcher";
 import { PythonBackendClient, type BackendEvent } from "./pythonClient";
@@ -14,9 +16,27 @@ import {
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const output = vscode.window.createOutputChannel("CodexAudio");
+  // Delay startup a bit so Codex session metadata (cwd) is ready.
+  await new Promise((resolve) => setTimeout(resolve, 1500));
   const state = await loadState(context);
   if (state.ttsEnabled === false) {
     state.ttsEnabled = true;
+    await saveState(context, state);
+  }
+  // Avoid showing stale text from previous sessions on startup.
+  state.lastDisplayText = "";
+  state.lastQueue = [];
+  state.lastTranslationLabel = "";
+  let stateChangedOnStart = false;
+  if (!state.showTranslationOnStart && state.showTranslationWindow) {
+    state.showTranslationWindow = false;
+    stateChangedOnStart = true;
+  }
+  if (!state.showMiniBarOnStart && state.miniBarVisible) {
+    state.miniBarVisible = false;
+    stateChangedOnStart = true;
+  }
+  if (stateChangedOnStart) {
     await saveState(context, state);
   }
 
@@ -54,6 +74,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       force: boolean;
     },
   };
+  let warnedMissingPython = false;
 
   const optionsProvider = new OptionsViewProvider(context, (msg) => onOptionsMessage(msg));
   context.subscriptions.push(
@@ -66,6 +87,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     pollIntervalMs: getCfgNumber("pollIntervalMs", 500),
     readLastOnStart: getCfgBool("readLastOnStart", true),
     scrubTtsFields: getCfgBool("scrubTtsFields", true),
+    workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "",
   });
   watcher.start();
   context.subscriptions.push({ dispose: () => watcher.stop() });
@@ -178,7 +200,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   async function startBackend(): Promise<void> {
-    const pythonPath = resolvePathPlaceholders(getCfgString("pythonPath", ""));
+    const pythonPath = resolvePythonPath();
     try {
       backend.start(pythonPath, context.extensionPath);
       runtime.backendOk = true;
@@ -335,7 +357,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
       if (evt.cmd === "translationClosed") {
         runtime.state.showTranslationWindow = false;
-        runtime.state.showTranslationOnStart = false;
+        void backend.request("show_translation", { show: false }).catch(() => {
+          // ignore
+        });
         void persistAndRefresh();
         return;
       }
@@ -509,17 +533,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (cmd === "testVoice") {
         await ensureBackend();
         if (!runtime.backendOk) return;
-        if (!canSpeakForTarget()) return;
-        const text = runtime.state.uiLang === "fr" ? "Test de voix." : "Voice test.";
-        await backend.request("stop");
-        await backend.request("speak_queue", {
-          queue: [text],
-          voice_id: runtime.state.ttsVoiceId,
-          rate: runtime.state.ttsRate,
-          volume: runtime.state.ttsVolume,
-          app_paused: runtime.state.appPaused,
-          muted: runtime.state.ttsMute,
-        });
+        if (!runtime.voices.length) {
+          await refreshBackendInfo();
+        }
+        const uiLang = baseLang(runtime.state.uiLang || "fr");
+        const voiceId =
+          pickVoiceForLang(runtime.voices, runtime.state.ttsVoiceId, "", uiLang) ||
+          runtime.voices[0]?.id ||
+          runtime.state.ttsVoiceId;
+        if (!voiceId) {
+          vscode.window.showWarningMessage("CodexAudio: aucune voix installée pour tester.");
+          return;
+        }
+        const text = uiLang === "fr" ? "Test de voix." : "Voice test.";
+        try {
+          await backend.request("speak_after", {
+            queue: [text],
+            voice_id: voiceId,
+            rate: runtime.state.ttsRate,
+            volume: runtime.state.ttsVolume,
+            app_paused: false,
+            muted: false,
+          });
+        } catch (err) {
+          const msg = String(err || "Erreur test voix");
+          output.appendLine(`[test-voice] ${msg}`);
+          vscode.window.showWarningMessage(`CodexAudio: test voix échoué: ${msg}`);
+        }
         return;
       }
     }
@@ -536,7 +576,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       runtime.state = { ...runtime.state, ...patch };
       const targetLangChanged = Object.prototype.hasOwnProperty.call(patch, "targetLang");
       const translateChanged = Object.prototype.hasOwnProperty.call(patch, "translateEnabled");
-      const shouldInterrupt = (announce && !!announceKey) || targetLangChanged;
+      const shouldInterrupt = targetLangChanged || translateChanged;
       let reprocessQueue: string[] | null = null;
 
       if (patch.uiLang) {
@@ -853,6 +893,46 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (folder) out = out.replaceAll("${workspaceFolder}", folder);
     }
     return out;
+  }
+
+  function resolvePythonPath(): string {
+    const configured = resolvePathPlaceholders(getCfgString("pythonPath", ""));
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
+    const venvCandidate =
+      workspaceFolder && process.platform === "win32"
+        ? path.join(workspaceFolder, ".venv", "Scripts", "python.exe")
+        : workspaceFolder
+          ? path.join(workspaceFolder, ".venv", "bin", "python")
+          : "";
+
+    const candidates: string[] = [];
+    if (configured) candidates.push(configured);
+    if (venvCandidate) candidates.push(venvCandidate);
+
+    const missing: string[] = [];
+    for (const candidate of candidates) {
+      if (!candidate.trim()) continue;
+      const looksLikePath =
+        candidate.includes("\\") ||
+        candidate.includes("/") ||
+        (process.platform === "win32" && candidate.includes(":")) ||
+        candidate.toLowerCase().endsWith(".exe");
+      if (!looksLikePath) return candidate;
+      if (fs.existsSync(candidate)) return candidate;
+      missing.push(candidate);
+    }
+
+    if (missing.length && !warnedMissingPython) {
+      warnedMissingPython = true;
+      vscode.window.showWarningMessage(
+        `CodexAudio: Python introuvable. Chemins testés: ${missing.join(" ; ")}. Utilisation de "python" depuis PATH.`,
+      );
+      output.appendLine(
+        `[backend] python introuvable, chemins testés: ${missing.join(" ; ")}. Fallback: python`,
+      );
+    }
+
+    return "python";
   }
 
   async function maybeShowDeferredWindows(): Promise<void> {
