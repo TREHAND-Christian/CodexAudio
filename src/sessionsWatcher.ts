@@ -144,7 +144,22 @@ export class CodexSessionsWatcher {
     if (!cwd) return false;
     const a = this.normalizePath(cwd);
     const b = this.normalizePath(root);
-    return a === b || a.startsWith(b + "\\");
+    return a === b || a.startsWith(b + "\\") || this.matchesRenamedWorkspace(cwd, root);
+  }
+
+  private matchesRenamedWorkspace(cwd: string, root: string): boolean {
+    try {
+      if (fs.existsSync(cwd) || !fs.existsSync(root)) return false;
+      if (this.normalizePath(path.dirname(cwd)) !== this.normalizePath(path.dirname(root))) {
+        return false;
+      }
+      const oldName = path.basename(cwd).toLowerCase();
+      const newName = path.basename(root).toLowerCase();
+      const stripRenameSuffix = (name: string) => name.replace(/(?:[-_ ]?(?:new|old|copy|copie)\d*)$/i, "");
+      return stripRenameSuffix(oldName) === newName || stripRenameSuffix(newName) === oldName;
+    } catch {
+      return false;
+    }
   }
 
   private async readLastAssistantInFile(file: string): Promise<AssistantHit | undefined> {
