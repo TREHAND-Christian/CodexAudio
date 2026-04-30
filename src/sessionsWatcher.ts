@@ -19,6 +19,9 @@ export type SessionsWatcherOptions = {
   workspaceRoot?: string;
 };
 
+type AssistantHit = { text: string; key: string; ts: number; cwd?: string };
+type LatestRollout = { file: string; last?: AssistantHit };
+
 const DEFAULT_SCRUB_KEYS = [
   "tts",
   "audio",
@@ -84,7 +87,7 @@ export class CodexSessionsWatcher {
     return path.join(home, ".codex", "sessions");
   }
 
-  private async findLatestRollout(): Promise<{ file: string; last?: { text: string; key: string } } | undefined> {
+  private async findLatestRollout(): Promise<LatestRollout | undefined> {
     const root = this.sessionsRoot();
     try {
       await fsp.access(root);
@@ -99,7 +102,7 @@ export class CodexSessionsWatcher {
       suppressErrors: true,
     });
     if (files.length === 0) return undefined;
-    let best: { file: string; last?: { text: string; key: string; cwd?: string }; ts: number } | undefined;
+    let best: { file: string; last?: AssistantHit; ts: number } | undefined;
     for (const file of files) {
       try {
         const st = await fsp.stat(file);
@@ -110,7 +113,7 @@ export class CodexSessionsWatcher {
           continue;
         }
         if (!best || ts >= best.ts) {
-          best = { file, last: last ? { text: last.text, key: last.key, cwd: last.cwd } : undefined, ts };
+          best = { file, last, ts };
         }
       } catch {
         // ignore
@@ -144,9 +147,7 @@ export class CodexSessionsWatcher {
     return a === b || a.startsWith(b + "\\");
   }
 
-  private async readLastAssistantInFile(
-    file: string,
-  ): Promise<{ text: string; key: string; ts: number; cwd?: string } | undefined> {
+  private async readLastAssistantInFile(file: string): Promise<AssistantHit | undefined> {
     try {
       const st = await fsp.stat(file);
       const size = st.size || 0;
@@ -256,7 +257,8 @@ export class CodexSessionsWatcher {
 
   private async primeLastMessage(file: string): Promise<void> {
     if (!this.opts.readLastOnStart) return;
-    let last: { text: string; key: string } | undefined;
+    let last: { text: string; key: string; cwd?: string } | undefined;
+    let currentCwd: string | undefined;
     try {
       const raw = await fsp.readFile(file, "utf8");
       for (const line of raw.split(/\r?\n/g)) {
@@ -264,8 +266,20 @@ export class CodexSessionsWatcher {
         if (!trimmed) continue;
         try {
           const obj = JSON.parse(trimmed) as unknown;
+          if (
+            obj &&
+            typeof obj === "object" &&
+            (obj as any).type === "turn_context" &&
+            (obj as any).payload &&
+            typeof (obj as any).payload === "object" &&
+            typeof (obj as any).payload.cwd === "string"
+          ) {
+            currentCwd = String((obj as any).payload.cwd);
+          }
           const res = this.extractAssistantText(obj);
-          if (res) last = res;
+          if (res && this.matchesWorkspace(currentCwd)) {
+            last = { ...res, cwd: currentCwd };
+          }
         } catch {
           // ignore
         }
@@ -418,7 +432,7 @@ export class CodexSessionsWatcher {
     }
     if (now - st.mtimeMs < this.opts.scrubIdleMs) return;
 
-    const beforeMtimeNs = st.mtimeNs?.toString?.() ?? String(st.mtimeMs);
+    const beforeMtimeMs = st.mtimeMs;
     const beforeSize = st.size;
 
     let raw: string;
@@ -456,8 +470,7 @@ export class CodexSessionsWatcher {
     try {
       await fsp.writeFile(tmp, outLines.join("\n"), "utf8");
       const latest = await fsp.stat(file);
-      const latestMtimeNs = latest.mtimeNs?.toString?.() ?? String(latest.mtimeMs);
-      if (latestMtimeNs !== beforeMtimeNs || latest.size !== beforeSize) {
+      if (latest.mtimeMs !== beforeMtimeMs || latest.size !== beforeSize) {
         await safeUnlink(tmp);
         return;
       }

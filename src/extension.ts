@@ -713,7 +713,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (token !== runtime.uiAnnounceSeq) return;
 
     const uiLang = baseLang(runtime.state.uiLang);
-    const uiVoiceId = pickVoiceForLang(uiLang);
+    const uiVoiceId = pickVoiceForLang(
+      runtime.voices,
+      runtime.state.voicePerLang?.[uiLang] || "",
+      runtime.state.ttsVoiceId,
+      uiLang,
+    );
     if (!uiVoiceId) return;
     const ratePct = Math.round((runtime.state.ttsRate || 1) * 100);
     const volumePct = Math.round(runtime.state.ttsVolume ?? 80);

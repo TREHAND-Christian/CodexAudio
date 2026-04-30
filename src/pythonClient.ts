@@ -46,23 +46,6 @@ export class PythonBackendClient implements vscode.Disposable {
       throw new Error("Chemin Python vide.");
     }
 
-    if (process.platform === "win32") {
-      try {
-        const scriptNeedle = "codex_audio_backend.py";
-        const ps = [
-          "$ErrorActionPreference='SilentlyContinue'",
-          `$needle='${scriptNeedle}'`,
-          "Get-CimInstance Win32_Process",
-          "| Where-Object { $_.CommandLine -and ($_.CommandLine -like ('*' + $needle + '*')) }",
-          "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
-        ].join("; ");
-        cp.spawnSync("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps], {
-          windowsHide: true,
-        });
-      } catch {
-        // ignore
-      }
-    }
     const script = path.join(extensionPath, "python", "codex_audio_backend.py");
     this.proc = cp.spawn(pythonPath, [script], {
       stdio: ["pipe", "pipe", "pipe"],
@@ -111,21 +94,6 @@ export class PythonBackendClient implements vscode.Disposable {
       if (process.platform === "win32" && typeof pid === "number" && pid > 0) {
         try {
           cp.spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { windowsHide: true });
-        } catch {
-          // ignore
-        }
-        try {
-          const scriptNeedle = "codex_audio_backend.py";
-          const ps = [
-            "$ErrorActionPreference='SilentlyContinue'",
-            `$needle='${scriptNeedle}'`,
-            "Get-CimInstance Win32_Process",
-            "| Where-Object { $_.CommandLine -and ($_.CommandLine -like ('*' + $needle + '*')) }",
-            "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
-          ].join("; ");
-          cp.spawnSync("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps], {
-            windowsHide: true,
-          });
         } catch {
           // ignore
         }
