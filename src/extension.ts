@@ -14,6 +14,15 @@ import {
   type Voice,
 } from "./langUtils";
 
+type ProcessResult = {
+  display_text?: unknown;
+  label?: unknown;
+  detected_lang?: unknown;
+  effective_lang?: unknown;
+  voice_id?: unknown;
+  queue?: unknown;
+};
+
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const output = vscode.window.createOutputChannel("CodexAudio");
   // Delay startup a bit so Codex session metadata (cwd) is ready.
@@ -616,7 +625,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         await ensureBackend();
         if (runtime.backendOk) {
           try {
-            const res = await backend.request("process", {
+            const res = await backend.request<ProcessResult>("process", {
               text: runtime.lastSourceText,
               target_lang: runtime.state.targetLang,
               translate_enabled: runtime.state.translateEnabled,
