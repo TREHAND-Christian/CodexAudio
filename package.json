@@ -12,9 +12,23 @@
     "package": "npm run compile && npx @vscode/vsce package --no-dependencies",
     "vscode:prepublish": "npm run compile"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "vscode",
+    "codex",
+    "tts",
+    "text-to-speech",
+    "translation"
+  ],
+  "author": "trehand",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trehand/CodexAudio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/trehand/CodexAudio/issues"
+  },
+  "homepage": "https://github.com/trehand/CodexAudio#readme",
   "type": "commonjs",
   "publisher": "trehand",
   "engines": {

@@ -1,18 +1,65 @@
-# CodexAudio (VS Code Extension)
+# CodexAudio
 
-CodexAudio lit à voix haute les réponses du modèle (via les fichiers `~/.codex/sessions/**/rollout-*.jsonl`) et affiche une barre latérale **Options** ainsi qu’un panneau **Traduction**.
+CodexAudio est une extension VS Code pour Windows qui lit a voix haute les reponses Codex a partir des fichiers de session `~/.codex/sessions/**/rollout-*.jsonl`.
 
-## Installation (.vsix)
+Elle fournit aussi une vue **Options**, une barre flottante de controle et une fenetre texte/traduction.
 
-1. Construire le VSIX :
-   - `npm install`
-   - `npm run package`
-2. Installer dans VS Code :
-   - Command Palette → **Extensions: Install from VSIX...**
-   - choisir le fichier `.vsix` généré à la racine.
+## Fonctionnalites
 
-## Prérequis
+- Lecture automatique des nouvelles reponses assistant.
+- Selection de voix Windows/WinRT par langue.
+- Pause, stop, muet et pause du service.
+- Fenetre texte avec traduction optionnelle via `googletrans`.
+- Filtrage par workspace pour eviter que plusieurs fenetres VS Code lisent la meme reponse.
 
-- Windows 10/11
-- Python 3.12 + venv : `C:\Users\treha\Desktop\CodexAudioNew\.venv`
-- Les dépendances Python sont listées dans `requirements.txt`.
+## Prerequis
+
+- Windows 10/11.
+- VS Code 1.108 ou plus recent.
+- Node.js et npm.
+- Python 3.12 recommande.
+- Dependances Python listees dans `requirements.txt`.
+
+## Installation developpement
+
+```powershell
+npm install
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+Par defaut, l'extension cherche Python ici :
+
+```text
+${workspaceFolder}\.venv\Scripts\python.exe
+```
+
+Ce chemin est configurable dans VS Code avec `codexAudio.pythonPath`.
+
+## Build
+
+```powershell
+npm run compile
+```
+
+La compilation lance d'abord `tsc --noEmit`, puis genere `dist/extension.js` avec esbuild.
+
+## Generer un VSIX
+
+```powershell
+npm run package
+```
+
+Le fichier `.vsix` genere a la racine est ignore par Git.
+
+## Installer le VSIX
+
+Dans VS Code :
+
+1. Ouvrir la palette de commandes.
+2. Lancer **Extensions: Install from VSIX...**.
+3. Choisir le fichier `codexaudio-*.vsix`.
+
+## Licence
+
+ISC
