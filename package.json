@@ -6,7 +6,8 @@
   "icon": "assets/CAC-logo.png",
   "main": "./dist/extension.js",
   "scripts": {
-    "compile": "node ./scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "compile": "npm run typecheck && node ./scripts/build.mjs",
     "watch": "node ./scripts/build.mjs --watch",
     "package": "npm run compile && npx @vscode/vsce package --no-dependencies",
     "vscode:prepublish": "npm run compile"
