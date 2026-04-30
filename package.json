@@ -100,8 +100,8 @@
       "properties": {
         "codexAudio.pythonPath": {
           "type": "string",
-          "default": "${workspaceFolder}\\\\.venv\\\\Scripts\\\\python.exe",
-          "description": "Chemin vers python.exe (venv) utilisé pour TTS/Traduction."
+          "default": "python",
+          "description": "Commande ou chemin vers python.exe utilise pour TTS/Traduction. Exemple: python ou C:\\\\chemin\\\\vers\\\\python.exe."
         },
         "codexAudio.pollIntervalMs": {
           "type": "number",

@@ -28,7 +28,9 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Par defaut, l'extension cherche Python ici :
+Par defaut, l'extension utilise `python` depuis le `PATH` Windows.
+
+Tu peux aussi pointer vers un environnement local, par exemple :
 
 ```text
 ${workspaceFolder}\.venv\Scripts\python.exe
@@ -36,7 +38,13 @@ ${workspaceFolder}\.venv\Scripts\python.exe
 
 Ce chemin est configurable dans VS Code avec `codexAudio.pythonPath`.
 
-Si ce chemin n'existe pas dans le workspace ouvert, le backend Python reste inactif sans afficher d'erreur. Pour utiliser un Python global, configure explicitement `codexAudio.pythonPath` avec `python` ou avec le chemin complet vers `python.exe`.
+Valeurs possibles :
+
+- `python`
+- `C:\chemin\vers\python.exe`
+- `${workspaceFolder}\.venv\Scripts\python.exe`
+
+Si la commande ou le chemin configure n'existe pas, le backend Python reste inactif sans afficher d'erreur.
 
 ## Build
 
