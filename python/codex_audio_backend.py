@@ -19,6 +19,24 @@ from queue import Queue, Empty
 from typing import Any, Optional
 
 
+def _configure_qt_runtime() -> None:
+    # Prefer software rendering for Qt WebEngine on Windows to avoid GPU/overlay crashes.
+    chromium_flags = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "").strip()
+    extra_flags = [
+        "--disable-gpu",
+        "--disable-gpu-compositing",
+    ]
+    for flag in extra_flags:
+        if flag not in chromium_flags:
+            chromium_flags = f"{chromium_flags} {flag}".strip()
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = chromium_flags
+    os.environ.setdefault("QT_OPENGL", "software")
+    os.environ.setdefault("QSG_RHI_BACKEND", "software")
+
+
+_configure_qt_runtime()
+
+
 def _force_utf8_stdio() -> None:
     try:
         if hasattr(sys.stdin, "reconfigure"):
@@ -1012,6 +1030,11 @@ def main() -> int:
     if QApplication is None or Qt is None:
         _event({"type": "error", "message": "PySide6 indisponible (UI flottante non disponible)."})
         return 1
+    try:
+        if hasattr(QApplication, "setAttribute") and hasattr(Qt, "AA_UseSoftwareOpenGL"):
+            QApplication.setAttribute(Qt.AA_UseSoftwareOpenGL, True)
+    except Exception:
+        pass
     expected = os.environ.get("CODEXAUDIO_EXPECTED_PYTHON", "").strip()
     if expected:
         try:
