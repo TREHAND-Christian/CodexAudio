@@ -1122,6 +1122,7 @@ def main() -> int:
 
     def handle(msg: dict) -> None:
         nonlocal want_minibar_visible, want_translation_visible
+        nonlocal app_paused_state, muted_state, playing_state
         req_id = str(msg.get("id") or "")
         method = str(msg.get("method") or "")
         params = msg.get("params") or {}
