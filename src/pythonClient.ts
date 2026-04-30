@@ -52,6 +52,12 @@ export class PythonBackendClient implements vscode.Disposable {
     if (!pythonPath || !pythonPath.trim()) {
       throw new Error("Chemin Python vide.");
     }
+    const trimmedPythonPath = pythonPath.trim();
+    const expectsExplicitPython =
+      trimmedPythonPath.includes("\\") ||
+      trimmedPythonPath.includes("/") ||
+      (process.platform === "win32" && trimmedPythonPath.includes(":")) ||
+      trimmedPythonPath.toLowerCase().endsWith(".exe");
 
     const script = path.join(extensionPath, "python", "codex_audio_backend.py");
     this.proc = cp.spawn(pythonPath, [script], {
@@ -59,7 +65,7 @@ export class PythonBackendClient implements vscode.Disposable {
       windowsHide: true,
       env: {
         ...process.env,
-        CODEXAUDIO_EXPECTED_PYTHON: pythonPath,
+        CODEXAUDIO_EXPECTED_PYTHON: expectsExplicitPython ? trimmedPythonPath : "",
         PYTHONIOENCODING: "utf-8",
         PYTHONUTF8: "1",
       },
