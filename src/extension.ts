@@ -213,13 +213,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   async function startBackend(): Promise<void> {
     const pythonPath = resolvePythonPath();
+    if (!pythonPath) {
+      runtime.backendOk = false;
+      output.appendLine("[backend] Python non configuré pour ce workspace.");
+      return;
+    }
     try {
       backend.start(pythonPath, context.extensionPath);
       runtime.backendOk = true;
       output.appendLine(`[backend] started: ${pythonPath}`);
     } catch (e) {
       runtime.backendOk = false;
-      vscode.window.showErrorMessage(`CodexAudio: impossible de démarrer le backend Python: ${String(e)}`);
       output.appendLine(`[backend] failed start: ${String(e)}`);
     }
   }
@@ -307,7 +311,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       runtime.voices = [];
       runtime.availableLanguages = [];
       runtime.translateAvailable = true;
-      vscode.window.showWarningMessage(`CodexAudio: backend Python indisponible: ${String(e)}`);
       output.appendLine(`[backend] refresh failed: ${String(e)}`);
     }
   }
@@ -352,9 +355,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     if (evt.type === "error") {
-      vscode.window.showWarningMessage(`CodexAudio: ${evt.message}`);
       output.appendLine(`[backend:error] ${evt.message}`);
-      output.show(true);
       refreshUi();
       return;
     }
@@ -866,7 +867,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   function refreshUi(): void {
     const engine = runtime.state.ttsVoiceId.startsWith("winrt:") ? "WinRT" : runtime.state.ttsVoiceId ? "Custom" : "Auto";
     let text = "";
-    if (runtime.state.appPaused) {
+    if (!runtime.backendOk) {
+      text = "$(warning) Backend Python indisponible";
+    } else if (runtime.state.appPaused) {
       text = `$(debug-pause) Pause • ${engine}`;
     } else if (runtime.isPaused) {
       text = `$(debug-pause) Pause lecture • ${engine}`;
@@ -912,7 +915,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     return out;
   }
 
-  function resolvePythonPath(): string {
+  function resolvePythonPath(): string | undefined {
     const configured = resolvePathPlaceholders(getCfgString("pythonPath", ""));
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
     const venvCandidate =
@@ -924,7 +927,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     const candidates: string[] = [];
     if (configured) candidates.push(configured);
-    if (venvCandidate) candidates.push(venvCandidate);
+    if (venvCandidate && venvCandidate !== configured) candidates.push(venvCandidate);
 
     const missing: string[] = [];
     for (const candidate of candidates) {
@@ -941,15 +944,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     if (missing.length && !warnedMissingPython) {
       warnedMissingPython = true;
-      vscode.window.showWarningMessage(
-        `CodexAudio: Python introuvable. Chemins testés: ${missing.join(" ; ")}. Utilisation de "python" depuis PATH.`,
-      );
-      output.appendLine(
-        `[backend] python introuvable, chemins testés: ${missing.join(" ; ")}. Fallback: python`,
-      );
+      output.appendLine(`[backend] python introuvable, chemins testés: ${missing.join(" ; ")}`);
     }
 
-    return "python";
+    return undefined;
   }
 
   async function maybeShowDeferredWindows(): Promise<void> {

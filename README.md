@@ -36,6 +36,8 @@ ${workspaceFolder}\.venv\Scripts\python.exe
 
 Ce chemin est configurable dans VS Code avec `codexAudio.pythonPath`.
 
+Si ce chemin n'existe pas dans le workspace ouvert, le backend Python reste inactif sans afficher d'erreur. Pour utiliser un Python global, configure explicitement `codexAudio.pythonPath` avec `python` ou avec le chemin complet vers `python.exe`.
+
 ## Build
 
 ```powershell
