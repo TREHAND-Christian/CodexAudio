@@ -11,7 +11,14 @@ export type BackendEvent =
   | { type: "backend_exit"; code: number | null; signal: string | null }
   | {
       type: "ui_cmd";
-      cmd: "playPause" | "stop" | "toggleMute" | "openOptions" | "openTranslation" | "openFile";
+      cmd:
+        | "playPause"
+        | "stop"
+        | "toggleMute"
+        | "openOptions"
+        | "openTranslation"
+        | "openFile"
+        | "translationClosed";
       path?: string;
     };
 
