@@ -131,7 +131,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand("codexAudio.openTranslation", () => {
       void ensureBackend().then(async () => {
         if (!runtime.backendOk) return;
+        runtime.state.showTranslationWindow = true;
+        runtime.deferStartupWindows = false;
         await backend.request("show_translation", { show: true });
+        await persistAndRefresh();
       });
     }),
     vscode.commands.registerCommand("codexAudio.playPause", async () => {
