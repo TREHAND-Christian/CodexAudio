@@ -486,8 +486,9 @@ class TTSEngine:
 
     def pause(self) -> None:
         with self._lock:
+            # Pause at the next sentence boundary instead of cutting the current spoken sentence.
             self._pause_flag = True
-            self._stop_flag = True
+            self._stop_flag = False
             self._restart_pending = False
             self._next_queue = []
             self._next_cfg = {}
@@ -568,6 +569,8 @@ class TTSEngine:
                 except Exception as e:
                     _event({"type": "error", "message": str(e)})
                 with self._lock:
+                    if not self._stop_flag:
+                        self._queue_index = i + 1
                     if self._stop_flag or self._pause_flag:
                         completed = False
                         break
@@ -701,7 +704,7 @@ class TTSEngine:
 
         while True:
             with self._lock:
-                if self._stop_flag or self._pause_flag:
+                if self._stop_flag:
                     break
 
             if (time.time() - t0) > max_sec:
@@ -850,7 +853,7 @@ class MiniBar(QWidget):
         self.btn_stop = QPushButton("■")
         self.btn_mute = QPushButton("🔈")
         self.btn_opts = QPushButton("⚙")
-        self.btn_text = QPushButton("TXT")
+        self.btn_text = QPushButton("▣")
 
         for b in [self.btn_play, self.btn_stop, self.btn_mute, self.btn_opts, self.btn_text]:
             b.setFixedSize(40, 32)
@@ -1047,8 +1050,9 @@ class MiniBar(QWidget):
         return labels[lang].get(key, key)
 
     def _update_labels(self) -> None:
-        self.btn_play.setText("⏸" if self._playing else "▶")
+        self.btn_play.setText("▮▮" if self._playing else "▶")
         self.btn_mute.setText("🔇" if self._muted else "🔈")
+        self.btn_text.setText("▣")
         self.btn_play.setToolTip(self._tooltip("play"))
         self.btn_stop.setToolTip(self._tooltip("stop"))
         self.btn_mute.setToolTip(self._tooltip("unmute" if self._muted else "mute"))

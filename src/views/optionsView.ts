@@ -95,7 +95,7 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
         <span id="lblVoice">Voix :</span>
         <select id="voice"></select>
       </label>
-      <label class="row">
+      <label class="row range-row">
         <span id="lblRateCaption">Vitesse :</span>
         <div class="range-wrap">
           <button id="rateDec" class="range-btn" type="button">-</button>
@@ -104,7 +104,7 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
         </div>
         <span id="rateVal" class="mono"></span>
       </label>
-      <label class="row">
+      <label class="row range-row">
         <span id="lblVolCaption">Volume :</span>
         <div class="range-wrap">
           <button id="volDec" class="range-btn" type="button">-</button>
