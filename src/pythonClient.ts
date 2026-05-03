@@ -1,4 +1,5 @@
 import * as cp from "node:child_process";
+import * as path from "node:path";
 import * as readline from "node:readline";
 import * as vscode from "vscode";
 
@@ -58,6 +59,7 @@ export class PythonBackendClient implements vscode.Disposable {
     if (!launch.command || !launch.command.trim()) {
       throw new Error("Commande backend vide.");
     }
+    this.stopStaleDedicatedBackends(launch.command);
     this.proc = cp.spawn(launch.command, launch.args, {
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
@@ -123,6 +125,19 @@ export class PythonBackendClient implements vscode.Disposable {
 
   isRunning(): boolean {
     return !!this.proc;
+  }
+
+  private stopStaleDedicatedBackends(command: string): void {
+    if (process.platform !== "win32") return;
+    if (path.basename(command).toLowerCase() !== "codexaudiobackend.exe") return;
+    try {
+      cp.spawnSync("taskkill", ["/IM", "CodexAudioBackend.exe", "/T", "/F"], {
+        windowsHide: true,
+        stdio: "ignore",
+      });
+    } catch {
+      // ignore
+    }
   }
 
   async request<T = unknown>(method: string, params?: unknown): Promise<T> {

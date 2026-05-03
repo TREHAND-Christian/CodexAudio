@@ -98,7 +98,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const watcher = new CodexSessionsWatcher((evt) => onWatcherEvent(evt), {
     pollIntervalMs: getCfgNumber("pollIntervalMs", 500),
-    readLastOnStart: getCfgBool("readLastOnStart", true),
+    readLastOnStart: false,
     scrubTtsFields: getCfgBool("scrubTtsFields", true),
     workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "",
   });

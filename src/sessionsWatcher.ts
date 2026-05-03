@@ -20,7 +20,8 @@ export type SessionsWatcherOptions = {
 };
 
 type AssistantHit = { text: string; key: string; ts: number; cwd?: string };
-type LatestRollout = { file: string; last?: AssistantHit };
+type RolloutSummary = { last?: AssistantHit; cwd?: string };
+type LatestRollout = { file: string; last?: AssistantHit; cwd?: string };
 
 const DEFAULT_SCRUB_KEYS = [
   "tts",
@@ -42,6 +43,8 @@ export class CodexSessionsWatcher {
   private currentFileCwd: string | undefined;
   private pos = 0;
   private lastEmittedKey = "";
+  private initialized = false;
+  private readonly startedAt = Date.now();
   private lastScrubAt = 0;
   private scrubPending = false;
 
@@ -52,7 +55,7 @@ export class CodexSessionsWatcher {
     this.onEvent = onEvent;
     this.opts = {
       pollIntervalMs: 500,
-      readLastOnStart: true,
+      readLastOnStart: false,
       scrubTtsFields: true,
       scrubIdleMs: 1000,
       scrubMinIntervalMs: 2000,
@@ -106,20 +109,22 @@ export class CodexSessionsWatcher {
     for (const file of files) {
       try {
         const st = await fsp.stat(file);
-        const last = await this.readLastAssistantInFile(file);
-        const ts = last?.ts ?? st.mtimeMs ?? 0;
-        if (this.opts.workspaceRoot && !last) {
-          // No matching message for this workspace, skip.
+        const summary = await this.readRolloutSummary(file);
+        const ts = st.mtimeMs ?? summary.last?.ts ?? 0;
+        if (this.opts.workspaceRoot && !summary.last && !this.matchesWorkspace(summary.cwd)) {
+          // No matching context/message for this workspace, skip.
           continue;
         }
         if (!best || ts >= best.ts) {
-          best = { file, last, ts };
+          best = { file, last: summary.last, ts };
         }
       } catch {
         // ignore
       }
     }
-    return best ? { file: best.file, last: best.last } : undefined;
+    if (!best) return undefined;
+    const summary = await this.readRolloutSummary(best.file);
+    return { file: best.file, last: summary.last, cwd: summary.cwd };
   }
 
   private parseTimestamp(obj: Record<string, unknown>): number | null {
@@ -162,7 +167,7 @@ export class CodexSessionsWatcher {
     }
   }
 
-  private async readLastAssistantInFile(file: string): Promise<AssistantHit | undefined> {
+  private async readRolloutSummary(file: string): Promise<RolloutSummary> {
     try {
       const st = await fsp.stat(file);
       const size = st.size || 0;
@@ -195,12 +200,12 @@ export class CodexSessionsWatcher {
             // ignore
           }
         }
-        return last;
+        return { last, cwd: currentCwd };
       } finally {
         await fd.close();
       }
     } catch {
-      return undefined;
+      return {};
     }
   }
 
@@ -314,19 +319,35 @@ export class CodexSessionsWatcher {
 
     if (latest.file !== this.currentFile) {
       this.currentFile = latest.file;
-      this.currentFileCwd = latest.last?.cwd;
+      this.currentFileCwd = latest.last?.cwd ?? latest.cwd;
       this.onEvent({ type: "file", file: latest.file });
-      if (latest.last && latest.last.key !== this.lastEmittedKey) {
+      const isNewSinceWatcherStart = !!latest.last && latest.last.ts >= this.startedAt;
+      if (!this.initialized) {
+        if (isNewSinceWatcherStart && latest.last && latest.last.key !== this.lastEmittedKey) {
+          this.lastEmittedKey = latest.last.key;
+          this.onEvent({
+            type: "message",
+            text: latest.last.text,
+            key: latest.last.key,
+            source: "codex_sessions",
+          });
+        } else if (latest.last) {
+          this.lastEmittedKey = latest.last.key;
+        }
+        this.initialized = true;
+      } else if (
+        latest.last &&
+        latest.last.key !== this.lastEmittedKey &&
+        (this.opts.readLastOnStart || latest.last.ts >= this.startedAt)
+      ) {
         this.lastEmittedKey = latest.last.key;
         this.onEvent({
           type: "message",
           text: latest.last.text,
           key: latest.last.key,
           source: "codex_sessions",
-          initial: true,
+          initial: this.opts.readLastOnStart,
         });
-      } else {
-        await this.primeLastMessage(latest.file);
       }
       if (this.opts.scrubTtsFields) {
         this.scrubPending = true;

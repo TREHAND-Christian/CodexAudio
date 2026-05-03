@@ -112,8 +112,8 @@
         },
         "codexAudio.readLastOnStart": {
           "type": "boolean",
-          "default": true,
-          "description": "Au démarrage, lit uniquement la dernière réponse assistant du fichier courant."
+          "default": false,
+          "description": "Option legacy: lire la dernière réponse assistant au démarrage. Désactivé par défaut."
         },
         "codexAudio.scrubTtsFields": {
           "type": "boolean",
