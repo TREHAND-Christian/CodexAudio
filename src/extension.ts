@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { CodexSessionsWatcher, type SessionsWatcherEvent } from "./sessionsWatcher";
-import { PythonBackendClient, type BackendEvent } from "./pythonClient";
+import { PythonBackendClient, type BackendEvent, type BackendLaunch } from "./pythonClient";
 import { loadState, saveState, type AppState } from "./state";
 import { OptionsViewProvider, type OptionsViewModel } from "./views/optionsView";
 import {
@@ -216,21 +216,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   async function startBackend(): Promise<void> {
-    const pythonPath = resolvePythonPath();
-    if (!pythonPath) {
+    const launch = resolveBackendLaunch();
+    if (!launch) {
       runtime.backendOk = false;
       output.appendLine("[backend] Python non configuré pour ce workspace.");
       return;
     }
     try {
-      backend.start(pythonPath, context.extensionPath);
+      backend.start(launch);
       runtime.backendOk = true;
       runtime.backendRestartCount = 0;
       if (runtime.backendRestartTimer) {
         clearTimeout(runtime.backendRestartTimer);
         runtime.backendRestartTimer = undefined;
       }
-      output.appendLine(`[backend] started: ${pythonPath}`);
+      output.appendLine(`[backend] started: ${launch.label}`);
     } catch (e) {
       runtime.backendOk = false;
       output.appendLine(`[backend] failed start: ${String(e)}`);
@@ -959,6 +959,35 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (folder) out = out.replaceAll("${workspaceFolder}", folder);
     }
     return out;
+  }
+
+  function resolveBackendLaunch(): BackendLaunch | undefined {
+    if (process.platform === "win32") {
+      const exe = path.join(context.extensionPath, "backend-win", "CodexAudioBackend", "CodexAudioBackend.exe");
+      if (fs.existsSync(exe)) {
+        return {
+          command: exe,
+          args: [],
+          label: "CodexAudioBackend.exe",
+        };
+      }
+    }
+
+    const pythonPath = resolvePythonPath();
+    if (!pythonPath) return undefined;
+    const trimmedPythonPath = pythonPath.trim();
+    const expectsExplicitPython =
+      trimmedPythonPath.includes("\\") ||
+      trimmedPythonPath.includes("/") ||
+      (process.platform === "win32" && trimmedPythonPath.includes(":")) ||
+      trimmedPythonPath.toLowerCase().endsWith(".exe");
+
+    return {
+      command: pythonPath,
+      args: [path.join(context.extensionPath, "python", "codex_audio_backend.py")],
+      label: pythonPath,
+      expectedPython: expectsExplicitPython ? trimmedPythonPath : "",
+    };
   }
 
   function resolvePythonPath(): string | undefined {

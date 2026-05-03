@@ -6,6 +6,7 @@ node_modules/**
 src/**
 scripts/**
 txt_tmp/**
+build/**
 *.vsix
 codexaudio-*.vsix
 codexaudio-latest.vsix

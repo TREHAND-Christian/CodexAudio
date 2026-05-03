@@ -1,7 +1,13 @@
 import * as cp from "node:child_process";
-import * as path from "node:path";
 import * as readline from "node:readline";
 import * as vscode from "vscode";
+
+export type BackendLaunch = {
+  command: string;
+  args: string[];
+  label: string;
+  expectedPython?: string;
+};
 
 export type BackendEvent =
   | { type: "log"; message: string }
@@ -47,25 +53,17 @@ export class PythonBackendClient implements vscode.Disposable {
     for (const d of this.disposables) d.dispose();
   }
 
-  start(pythonPath: string, extensionPath: string): void {
+  start(launch: BackendLaunch): void {
     this.stop();
-    if (!pythonPath || !pythonPath.trim()) {
-      throw new Error("Chemin Python vide.");
+    if (!launch.command || !launch.command.trim()) {
+      throw new Error("Commande backend vide.");
     }
-    const trimmedPythonPath = pythonPath.trim();
-    const expectsExplicitPython =
-      trimmedPythonPath.includes("\\") ||
-      trimmedPythonPath.includes("/") ||
-      (process.platform === "win32" && trimmedPythonPath.includes(":")) ||
-      trimmedPythonPath.toLowerCase().endsWith(".exe");
-
-    const script = path.join(extensionPath, "python", "codex_audio_backend.py");
-    this.proc = cp.spawn(pythonPath, [script], {
+    this.proc = cp.spawn(launch.command, launch.args, {
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
       env: {
         ...process.env,
-        CODEXAUDIO_EXPECTED_PYTHON: expectsExplicitPython ? trimmedPythonPath : "",
+        CODEXAUDIO_EXPECTED_PYTHON: launch.expectedPython || "",
         PYTHONIOENCODING: "utf-8",
         PYTHONUTF8: "1",
       },

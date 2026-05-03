@@ -8,8 +8,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "compile": "npm run typecheck && node ./scripts/build.mjs",
+    "build:backend": "powershell -ExecutionPolicy Bypass -File ./scripts/build-backend-exe.ps1",
     "watch": "node ./scripts/build.mjs --watch",
-    "package": "npm run compile && npx @vscode/vsce package --no-dependencies",
+    "package": "npm run compile && npm run build:backend && npx @vscode/vsce package --no-dependencies",
     "vscode:prepublish": "npm run compile"
   },
   "keywords": [
