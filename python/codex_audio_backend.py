@@ -830,6 +830,8 @@ class MiniBar(QWidget):
         self._app_paused = False
         self._muted = False
         self._playing = False
+        self._theme = "dark"
+        self._ui_lang = "fr"
         self._drag_enabled = True
         self._drag_active = False
         self._drag_offset = None
@@ -842,21 +844,21 @@ class MiniBar(QWidget):
         self.setWindowFlag(Qt.Tool, True)
         self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.setFixedHeight(36)
+        self.setFixedHeight(42)
 
-        self.btn_play = QPushButton("⏯")
-        self.btn_stop = QPushButton("⏹")
-        self.btn_mute = QPushButton("🔇")
+        self.btn_play = QPushButton("▶")
+        self.btn_stop = QPushButton("■")
+        self.btn_mute = QPushButton("🔈")
         self.btn_opts = QPushButton("⚙")
-        self.btn_text = QPushButton("🪟")
+        self.btn_text = QPushButton("TXT")
 
         for b in [self.btn_play, self.btn_stop, self.btn_mute, self.btn_opts, self.btn_text]:
-            b.setFixedSize(34, 28)
+            b.setFixedSize(40, 32)
             b.setFlat(True)
             b.installEventFilter(self)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(6, 4, 6, 4)
+        layout.setContentsMargins(7, 5, 7, 5)
         layout.setSpacing(6)
         layout.addWidget(self.btn_play)
         layout.addWidget(self.btn_stop)
@@ -869,6 +871,8 @@ class MiniBar(QWidget):
         self.btn_mute.clicked.connect(lambda: self._on_ui_cmd("toggleMute"))
         self.btn_opts.clicked.connect(lambda: self._on_ui_cmd("openOptions"))
         self.btn_text.clicked.connect(lambda: self._on_ui_cmd("openTranslation"))
+        self._apply_button_style()
+        self._update_labels()
         self._restore_window_state()
 
     def ensure_on_top(self, activate: bool = False) -> None:
@@ -999,17 +1003,83 @@ class MiniBar(QWidget):
         except Exception:
             pass
 
-    def set_state(self, app_paused: bool, muted: bool, playing: bool) -> None:
+    def set_state(self, app_paused: bool, muted: bool, playing: bool, theme: str = "", ui_lang: str = "") -> None:
         self._app_paused = bool(app_paused)
         self._muted = bool(muted)
         self._playing = bool(playing)
+        if theme:
+            self._theme = "light" if str(theme).lower() == "light" else "dark"
+        if ui_lang:
+            self._ui_lang = str(ui_lang).lower().split("-")[0] or "fr"
+        self._apply_button_style()
+        self._update_labels()
         self.update()
+
+    def _tooltip(self, key: str) -> str:
+        labels = {
+            "fr": {
+                "play": "Lire / pause",
+                "stop": "Stop",
+                "mute": "Muet",
+                "unmute": "Son",
+                "text": "Texte",
+                "options": "Options",
+            },
+            "en": {
+                "play": "Play / pause",
+                "stop": "Stop",
+                "mute": "Mute",
+                "unmute": "Sound",
+                "text": "Text",
+                "options": "Options",
+            },
+            "de": {"play": "Start / Pause", "stop": "Stopp", "mute": "Stumm", "unmute": "Ton", "text": "Text", "options": "Optionen"},
+            "es": {"play": "Reproducir / pausa", "stop": "Parar", "mute": "Silencio", "unmute": "Sonido", "text": "Texto", "options": "Opciones"},
+            "it": {"play": "Play / pausa", "stop": "Stop", "mute": "Muto", "unmute": "Audio", "text": "Testo", "options": "Opzioni"},
+            "pt": {"play": "Reproduzir / pausa", "stop": "Parar", "mute": "Mudo", "unmute": "Som", "text": "Texto", "options": "Opcoes"},
+            "nl": {"play": "Afspelen / pauze", "stop": "Stop", "mute": "Dempen", "unmute": "Geluid", "text": "Tekst", "options": "Opties"},
+            "ru": {"play": "Пуск / пауза", "stop": "Стоп", "mute": "Без звука", "unmute": "Звук", "text": "Текст", "options": "Параметры"},
+            "ja": {"play": "再生 / 一時停止", "stop": "停止", "mute": "ミュート", "unmute": "音声", "text": "テキスト", "options": "設定"},
+            "zh": {"play": "播放 / 暂停", "stop": "停止", "mute": "静音", "unmute": "声音", "text": "文本", "options": "选项"},
+            "ar": {"play": "تشغيل / إيقاف", "stop": "إيقاف", "mute": "كتم", "unmute": "صوت", "text": "نص", "options": "خيارات"},
+        }
+        lang = self._ui_lang if self._ui_lang in labels else "fr"
+        return labels[lang].get(key, key)
+
+    def _update_labels(self) -> None:
+        self.btn_play.setText("⏸" if self._playing else "▶")
+        self.btn_mute.setText("🔇" if self._muted else "🔈")
+        self.btn_play.setToolTip(self._tooltip("play"))
+        self.btn_stop.setToolTip(self._tooltip("stop"))
+        self.btn_mute.setToolTip(self._tooltip("unmute" if self._muted else "mute"))
+        self.btn_text.setToolTip(self._tooltip("text"))
+        self.btn_opts.setToolTip(self._tooltip("options"))
+
+    def _apply_button_style(self) -> None:
+        if self._theme == "light":
+            bg = "#f6f8fa"
+            fg = "#1f2328"
+            hover = "#eaeef2"
+            border = "#d0d7de"
+        else:
+            bg = "#252526"
+            fg = "#f2f2f2"
+            hover = "#333333"
+            border = "#4a4a4a"
+        self.setStyleSheet(
+            "QPushButton {"
+            f"background:{bg}; color:{fg}; border:1px solid {border};"
+            "border-radius:7px; font-size:18px; font-weight:700; padding:0;"
+            "}"
+            f"QPushButton:hover {{ background:{hover}; }}"
+            "QToolTip { padding:4px 7px; border-radius:4px; }"
+        )
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing, True)
         border_color = QColor(196, 58, 58) if self._app_paused else QColor(47, 191, 58)
-        bg_color = QColor(230, 230, 230)
+        bg_color = QColor(246, 248, 250) if self._theme == "light" else QColor(37, 37, 38)
         border_width = 3
         radius = 8
         rect = self.rect().adjusted(
@@ -1226,11 +1296,7 @@ def main() -> int:
                 app_paused_state = bool(params.get("app_paused") is True)
                 muted_state = bool(params.get("muted") is True)
                 playing_state = True
-                minibar.set_state(
-                    app_paused=app_paused_state,
-                    muted=muted_state,
-                    playing=playing_state,
-                )
+                minibar.set_state(app_paused=app_paused_state, muted=muted_state, playing=playing_state)
                 _response(req_id, True, {"ok": True})
             elif method == "speak_after":
                 if not isinstance(params, dict):
@@ -1303,7 +1369,17 @@ def main() -> int:
                 app_paused_state = bool(params.get("app_paused") is True)
                 muted_state = bool(params.get("muted") is True)
                 playing_state = bool(params.get("playing") is True)
-                minibar.set_state(app_paused=app_paused_state, muted=muted_state, playing=playing_state)
+                theme = str(params.get("theme") or "")
+                ui_lang = str(params.get("ui_lang") or "")
+                minibar.set_state(
+                    app_paused=app_paused_state,
+                    muted=muted_state,
+                    playing=playing_state,
+                    theme=theme,
+                    ui_lang=ui_lang,
+                )
+                if theme:
+                    translation.set_theme(theme)
                 _response(req_id, True, {"ok": True})
             else:
                 _response(req_id, False, error=f"Unknown method: {method}")

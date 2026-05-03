@@ -13,7 +13,7 @@ It is designed for the OpenAI/Codex VS Code extension. CodexAudio watches the Op
 - Reads the displayed text aloud with Windows/WinRT voices.
 - Supports pause, stop, mute, service pause, voice selection, speed and volume.
 - Optional text translation through `googletrans`.
-- Floating text window follows the light/dark system theme.
+- Floating text window and floating toolbar support an explicit light/dark theme setting.
 
 ## How It Works
 

@@ -139,6 +139,14 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
         <input type="checkbox" id="barStart" />
         <span id="lblBarStart">Afficher la barre flottante au démarrage</span>
       </label>
+      <label class="row">
+        <span id="lblTheme">Thème fenêtre :</span>
+        <div class="segmented" role="group" aria-label="Thème fenêtre">
+          <button id="themeDark" class="segment-btn" type="button">Sombre</button>
+          <button id="themeLight" class="segment-btn" type="button">Clair</button>
+        </div>
+        <span></span>
+      </label>
     </div>
 
     <div class="group">

@@ -102,6 +102,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     scrubTtsFields: getCfgBool("scrubTtsFields", false),
     workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "",
     codexLogFile: resolveCodexLogFile(),
+    displayLang: () => baseLang(runtime.state.targetLang || runtime.state.uiLang || "fr"),
   });
   watcher.start();
   context.subscriptions.push({ dispose: () => watcher.stop() });
@@ -177,6 +178,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         app_paused: runtime.state.appPaused,
         muted: runtime.state.ttsMute,
         playing: false,
+        theme: runtime.state.uiTheme,
+        ui_lang: runtime.state.uiLang,
       });
       refreshUi();
     }),
@@ -192,6 +195,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           app_paused: runtime.state.appPaused,
           muted: runtime.state.ttsMute,
           playing: runtime.isSpeaking && !runtime.isPaused,
+          theme: runtime.state.uiTheme,
+          ui_lang: runtime.state.uiLang,
         });
       }
       await persistAndRefresh();
@@ -208,6 +213,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           app_paused: runtime.state.appPaused,
           muted: runtime.state.ttsMute,
           playing: runtime.isSpeaking && !runtime.isPaused,
+          theme: runtime.state.uiTheme,
+          ui_lang: runtime.state.uiLang,
         });
         await backend.request("show_translation", { show: shouldShowTranslation(false) });
         await backend.request("show_minibar", { show: shouldShowMiniBar(false) });
@@ -381,6 +388,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           app_paused: runtime.state.appPaused,
           muted: runtime.state.ttsMute,
           playing: true,
+          theme: runtime.state.uiTheme,
+          ui_lang: runtime.state.uiLang,
         });
       });
       refreshUi();
@@ -395,6 +404,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           app_paused: runtime.state.appPaused,
           muted: runtime.state.ttsMute,
           playing: false,
+          theme: runtime.state.uiTheme,
+          ui_lang: runtime.state.uiLang,
         });
       });
       void playPendingUiAnnouncement();
@@ -736,6 +747,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           app_paused: runtime.state.appPaused,
           muted: runtime.state.ttsMute,
           playing: runtime.isSpeaking && !runtime.isPaused,
+          theme: runtime.state.uiTheme,
+          ui_lang: runtime.state.uiLang,
         });
         await backend.request("show_translation", { show: shouldShowTranslation(false) });
         await backend.request("show_minibar", { show: shouldShowMiniBar(false) });
@@ -814,6 +827,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       showText: runtime.state.showTranslationWindow,
       showTextStart: runtime.state.showTranslationOnStart,
       targetPhrase,
+      theme: runtime.state.uiTheme === "light" ? "light" : "dark",
     });
 
     const phrase = phrases[key];

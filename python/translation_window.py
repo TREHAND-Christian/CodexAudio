@@ -116,6 +116,7 @@ class TranslationWindow(QWidget):
         self._on_focus = on_focus
         self._state_fns = window_state_fns
         self._logo_data_url = self._load_logo_data_url()
+        self._theme = "dark"
 
         self._visible = False
         self._pending_seq = 0
@@ -203,15 +204,17 @@ class TranslationWindow(QWidget):
                 pass
         super().changeEvent(event)
 
+    def set_theme(self, theme: str) -> None:
+        theme = "light" if str(theme or "").lower() == "light" else "dark"
+        if theme == self._theme:
+            return
+        self._theme = theme
+        self._apply_native_theme()
+        if self._rendered_seq > 0:
+            self._render()
+
     def _detect_theme(self) -> str:
-        try:
-            app = QApplication.instance() if QApplication is not None else None
-            if app is None:
-                return "dark"
-            color = app.palette().color(app.palette().Window)
-            return "light" if int(color.lightness()) >= 128 else "dark"
-        except Exception:
-            return "dark"
+        return self._theme
 
     def _apply_native_theme(self) -> None:
         if QTextBrowser is not None and isinstance(getattr(self, "browser", None), QTextBrowser):

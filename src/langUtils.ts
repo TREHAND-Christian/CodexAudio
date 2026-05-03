@@ -43,6 +43,7 @@ export function buildAnnouncePhrases(
     showText: boolean;
     showTextStart: boolean;
     targetPhrase: string;
+    theme: "dark" | "light";
   },
 ): Record<string, string> {
   const fr: Record<string, string> = {
@@ -61,6 +62,7 @@ export function buildAnnouncePhrases(
       ? "La fenêtre texte s'affiche au démarrage."
       : "La fenêtre texte ne s'affiche pas au démarrage.",
     target_lang: `La langue cible est ${ctx.targetPhrase}.`,
+    theme: `Le thème de la fenêtre est ${ctx.theme === "light" ? "clair" : "sombre"}.`,
   };
   const en: Record<string, string> = {
     voice: `The voice is set to ${ctx.voiceLabel}.`,
@@ -78,6 +80,7 @@ export function buildAnnouncePhrases(
       ? "The text window shows on startup."
       : "The text window does not show on startup.",
     target_lang: `The target language is ${ctx.targetPhrase}.`,
+    theme: `The window theme is ${ctx.theme === "light" ? "light" : "dark"}.`,
   };
   return baseLang(uiLang) === "en" ? en : fr;
 }

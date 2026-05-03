@@ -27,6 +27,7 @@ export type SessionsWatcherOptions = {
   workspaceRoot?: string;
   codexLogRecentMs: number;
   codexLogFile?: string;
+  displayLang?: () => string;
 };
 
 type AssistantHit = { text: string; key: string; ts: number; cwd?: string };
@@ -257,7 +258,9 @@ export class CodexSessionsWatcher {
 
   private formatConversationList(conversations: WorkspaceConversation[]): string {
     if (conversations.length === 0) {
-      return "- Aucune conversation liee au dossier ouvert.";
+      return this.displayLang() === "en"
+        ? "- No conversation is available for the opened folder."
+        : "- Aucune conversation n'est disponible pour le dossier ouvert.";
     }
     return conversations
       .map((c) => {
@@ -268,9 +271,14 @@ export class CodexSessionsWatcher {
   }
 
   private availableConversationsPhrase(count: number): string {
-    if (count === 1) return "la conversation disponible dans ce contexte est :";
-    if (count > 1) return "les conversations disponibles dans ce contexte sont :";
-    return "aucune conversation n'est disponible dans ce contexte :";
+    if (this.displayLang() === "en") {
+      if (count === 1) return "The conversation available in this context is:";
+      if (count > 1) return "The conversations available in this context are:";
+      return "No conversation is available in this context:";
+    }
+    if (count === 1) return "La conversation disponible dans ce contexte est :";
+    if (count > 1) return "Les conversations disponibles dans ce contexte sont :";
+    return "Aucune conversation n'est disponible dans ce contexte :";
   }
 
   private workspaceLabel(): string {
@@ -278,14 +286,23 @@ export class CodexSessionsWatcher {
     return root ? path.basename(root) : "dossier ouvert";
   }
 
+  private displayLang(): string {
+    try {
+      const raw = this.opts.displayLang?.() || "fr";
+      return String(raw).trim().toLowerCase().split("-")[0] || "fr";
+    } catch {
+      return "fr";
+    }
+  }
+
   private async emitWorkspaceConversationList(): Promise<void> {
     if (this.listedWorkspaceConversations) return;
     this.listedWorkspaceConversations = true;
     const conversations = await this.listWorkspaceConversations();
     const text =
-      `Pour le dossier : ${this.workspaceLabel()},\n\n` +
-      `${this.availableConversationsPhrase(conversations.length)}\n\n` +
-      this.formatConversationList(conversations);
+      this.displayLang() === "en"
+        ? `For folder: ${this.workspaceLabel()}\n\n${this.availableConversationsPhrase(conversations.length)}\n\n${this.formatConversationList(conversations)}`
+        : `Pour le dossier : ${this.workspaceLabel()}\n\n${this.availableConversationsPhrase(conversations.length)}\n\n${this.formatConversationList(conversations)}`;
     this.onEvent({
       type: "loaded",
       text,
@@ -302,10 +319,9 @@ export class CodexSessionsWatcher {
     const conversations = await this.listWorkspaceConversations();
     const conversationTitle = (await this.readConversationName(conversationId)) || "Conversation sans titre";
     const text =
-      `Pour le dossier : ${this.workspaceLabel()},\n\n` +
-      `la conversation : ${conversationTitle} est hors contexte.\n\n` +
-      `${this.availableConversationsPhrase(conversations.length)}\n\n` +
-      this.formatConversationList(conversations);
+      this.displayLang() === "en"
+        ? `For folder: ${this.workspaceLabel()}\n\nThe conversation "${conversationTitle}" is out of context.\n\n${this.availableConversationsPhrase(conversations.length)}\n\n${this.formatConversationList(conversations)}`
+        : `Pour le dossier : ${this.workspaceLabel()}\n\nLa conversation "${conversationTitle}" est hors contexte.\n\n${this.availableConversationsPhrase(conversations.length)}\n\n${this.formatConversationList(conversations)}`;
     this.onEvent({
       type: "loaded",
       text,
@@ -621,7 +637,7 @@ export class CodexSessionsWatcher {
         } else {
           this.onEvent({
             type: "loaded",
-            text: `Derniere reponse :\n\n${latest.last.text}`,
+            text: `${this.displayLang() === "en" ? "Latest response:" : "Derniere reponse :"}\n\n${latest.last.text}`,
             key: latest.last.key,
             source: "codex_sessions",
             file: latest.file,

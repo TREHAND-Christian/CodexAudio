@@ -14,6 +14,9 @@
       auto_read: "Lecture automatique des nouvelles réponses",
       bar_top: "Afficher la barre flottante",
       bar_start: "Afficher la barre flottante au démarrage",
+      theme: "Thème fenêtre :",
+      theme_dark: "Sombre",
+      theme_light: "Clair",
       show_text: "Afficher la fenêtre texte",
       show_text_start: "Afficher la fenêtre texte au démarrage",
       app_paused: "Mettre le service en pause",
@@ -36,6 +39,9 @@
       auto_read: "Auto-read new responses",
       bar_top: "Show the floating bar",
       bar_start: "Show the floating bar on startup",
+      theme: "Window theme:",
+      theme_dark: "Dark",
+      theme_light: "Light",
       show_text: "Show the text window",
       show_text_start: "Show the text window on startup",
       app_paused: "Pause the service",
@@ -58,6 +64,9 @@
       auto_read: "Neue Antworten automatisch lesen",
       bar_top: "Schwebebalken anzeigen",
       bar_start: "Schwebebalken beim Start anzeigen",
+      theme: "Fensterdesign:",
+      theme_dark: "Dunkel",
+      theme_light: "Hell",
       show_text: "Textfenster anzeigen",
       show_text_start: "Textfenster beim Start anzeigen",
       app_paused: "Dienst pausieren",
@@ -80,6 +89,9 @@
       auto_read: "Lectura automática de nuevas respuestas",
       bar_top: "Mostrar la barra flotante",
       bar_start: "Mostrar la barra flotante al iniciar",
+      theme: "Tema de ventana:",
+      theme_dark: "Oscuro",
+      theme_light: "Claro",
       show_text: "Mostrar la ventana de texto",
       show_text_start: "Mostrar la ventana de texto al iniciar",
       app_paused: "Pausar el servicio",
@@ -102,6 +114,9 @@
       auto_read: "Lettura automatica delle nuove risposte",
       bar_top: "Mostra la barra flottante",
       bar_start: "Mostra la barra flottante all'avvio",
+      theme: "Tema finestra:",
+      theme_dark: "Scuro",
+      theme_light: "Chiaro",
       show_text: "Mostra la finestra di testo",
       show_text_start: "Mostra la finestra di testo all'avvio",
       app_paused: "Metti in pausa il servizio",
@@ -124,6 +139,9 @@
       auto_read: "Leitura automática de novas respostas",
       bar_top: "Mostrar a barra flutuante",
       bar_start: "Mostrar a barra flutuante ao iniciar",
+      theme: "Tema da janela:",
+      theme_dark: "Escuro",
+      theme_light: "Claro",
       show_text: "Mostrar a janela de texto",
       show_text_start: "Mostrar a janela de texto ao iniciar",
       app_paused: "Pausar o serviço",
@@ -146,6 +164,9 @@
       auto_read: "Nieuwe antwoorden automatisch lezen",
       bar_top: "Zwevende balk tonen",
       bar_start: "Zwevende balk bij opstarten tonen",
+      theme: "Vensterthema:",
+      theme_dark: "Donker",
+      theme_light: "Licht",
       show_text: "Tekstvenster tonen",
       show_text_start: "Tekstvenster bij opstarten tonen",
       app_paused: "Service pauzeren",
@@ -168,6 +189,9 @@
       auto_read: "Авточтение новых ответов",
       bar_top: "Показывать плавающую панель",
       bar_start: "Показывать плавающую панель при запуске",
+      theme: "Тема окна:",
+      theme_dark: "Темная",
+      theme_light: "Светлая",
       show_text: "Показывать окно текста",
       show_text_start: "Показывать окно текста при запуске",
       app_paused: "Поставить службу на паузу",
@@ -190,6 +214,9 @@
       auto_read: "新しい回答を自動読み上げ",
       bar_top: "フローティングバーを表示",
       bar_start: "起動時にフローティングバーを表示",
+      theme: "ウィンドウテーマ:",
+      theme_dark: "ダーク",
+      theme_light: "ライト",
       show_text: "テキストウィンドウを表示",
       show_text_start: "起動時にテキストウィンドウを表示",
       app_paused: "サービスを一時停止",
@@ -212,6 +239,9 @@
       auto_read: "自动朗读新回复",
       bar_top: "显示浮动栏",
       bar_start: "启动时显示浮动栏",
+      theme: "窗口主题:",
+      theme_dark: "深色",
+      theme_light: "浅色",
       show_text: "显示文本窗口",
       show_text_start: "启动时显示文本窗口",
       app_paused: "暂停服务",
@@ -234,6 +264,9 @@
       auto_read: "قراءة تلقائية للردود الجديدة",
       bar_top: "إظهار الشريط العائم",
       bar_start: "إظهار الشريط العائم عند البدء",
+      theme: "نسق النافذة:",
+      theme_dark: "داكن",
+      theme_light: "فاتح",
       show_text: "إظهار نافذة النص",
       show_text_start: "إظهار نافذة النص عند البدء",
       app_paused: "إيقاف الخدمة مؤقتًا",
@@ -255,6 +288,8 @@
   const autoRead = byId("autoRead");
   const barTop = byId("barTop");
   const barStart = byId("barStart");
+  const themeDark = byId("themeDark");
+  const themeLight = byId("themeLight");
   const showText = byId("showText");
   const showTextStart = byId("showTextStart");
   const pauseService = byId("pauseService");
@@ -299,6 +334,11 @@
     autoRead.checked = !!s.autoReadNewResponses;
     barTop.checked = !!s.miniBarVisible;
     barStart.checked = !!s.showMiniBarOnStart;
+    const theme = String(s.uiTheme || "dark").toLowerCase() === "light" ? "light" : "dark";
+    themeDark.classList.toggle("is-active", theme === "dark");
+    themeLight.classList.toggle("is-active", theme === "light");
+    themeDark.disabled = !!s.appPaused;
+    themeLight.disabled = !!s.appPaused;
     showText.checked = !!s.showTranslationWindow;
     showTextStart.checked = !!s.showTranslationOnStart;
     pauseService.checked = !!s.appPaused;
@@ -553,6 +593,8 @@
   );
   barTop.addEventListener("change", () => postPatchWithAnnounce({ miniBarVisible: barTop.checked }, "bar_top", true));
   barStart.addEventListener("change", () => postPatchWithAnnounce({ showMiniBarOnStart: barStart.checked }, "bar_start", true));
+  themeDark.addEventListener("click", () => postPatchWithAnnounce({ uiTheme: "dark" }, "theme", true));
+  themeLight.addEventListener("click", () => postPatchWithAnnounce({ uiTheme: "light" }, "theme", true));
   showText.addEventListener("change", () => postPatchWithAnnounce({ showTranslationWindow: showText.checked }, "show_text", true));
   showTextStart.addEventListener("change", () =>
     postPatchWithAnnounce({ showTranslationOnStart: showTextStart.checked }, "show_text_start", true),
@@ -631,6 +673,9 @@
     setText("lblAutoRead", tr.auto_read);
     setText("lblBarTop", tr.bar_top);
     setText("lblBarStart", tr.bar_start);
+    setText("lblTheme", tr.theme);
+    setText("themeDark", tr.theme_dark);
+    setText("themeLight", tr.theme_light);
     setText("lblShowText", tr.show_text);
     setText("lblShowTextStart", tr.show_text_start);
     setText("lblPauseService", tr.app_paused);

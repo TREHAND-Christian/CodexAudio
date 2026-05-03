@@ -118,7 +118,7 @@ button.secondary {
 
 .row {
   display: grid;
-  grid-template-columns: minmax(120px, 170px) 1fr auto;
+  grid-template-columns: minmax(82px, 132px) minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--ca-gap);
   margin: 6px 0;
@@ -206,6 +206,7 @@ input[type="range"]::-moz-range-thumb {
   grid-template-columns: 28px 1fr 28px;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .range-btn {
@@ -216,6 +217,37 @@ input[type="range"]::-moz-range-thumb {
   text-align: center;
   border-radius: 8px;
   font-weight: 700;
+}
+
+.segmented {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  border: 1px solid var(--ca-border);
+  border-radius: var(--ca-radius-sm);
+  background: var(--vscode-input-background);
+  padding: 2px;
+  min-width: 0;
+}
+
+.segment-btn {
+  min-width: 0;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--vscode-input-foreground);
+  box-shadow: none;
+}
+
+.segment-btn:hover {
+  transform: none;
+  background: color-mix(in srgb, var(--ca-accent) 14%, transparent 86%);
+}
+
+.segment-btn.is-active {
+  background: var(--ca-accent);
+  color: var(--vscode-button-foreground);
 }
 
 .select {

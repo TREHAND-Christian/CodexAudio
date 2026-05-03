@@ -11,6 +11,7 @@ export type AppState = {
   showMiniBarOnStart: boolean;
   showTranslationWindow: boolean;
   showTranslationOnStart: boolean;
+  uiTheme: "dark" | "light";
   appPaused: boolean;
   ttsEnabled: boolean;
   ttsMute: boolean;
@@ -34,6 +35,7 @@ export const DEFAULT_STATE: AppState = {
   showMiniBarOnStart: true,
   showTranslationWindow: true,
   showTranslationOnStart: true,
+  uiTheme: "dark",
   appPaused: false,
   ttsEnabled: true,
   ttsMute: false,
@@ -81,12 +83,14 @@ export async function loadState(ctx: vscode.ExtensionContext): Promise<AppState>
       // ignore
     }
   }
-  return {
+  const loaded = {
     ...DEFAULT_STATE,
     ...(raw || {}),
     voicePerLang: typeof raw?.voicePerLang === "object" && raw?.voicePerLang ? raw.voicePerLang : DEFAULT_STATE.voicePerLang,
     lastQueue: Array.isArray(raw?.lastQueue) ? raw!.lastQueue! : DEFAULT_STATE.lastQueue,
   };
+  loaded.uiTheme = loaded.uiTheme === "light" ? "light" : "dark";
+  return loaded;
 }
 
 export async function saveState(ctx: vscode.ExtensionContext, state: AppState): Promise<void> {
