@@ -1,8 +1,8 @@
 {
   "name": "codexaudio",
   "displayName": "CodexAudio",
-  "version": "0.0.42",
-  "description": "Lit à voix haute les réponses Codex de la conversation active détectée via les logs VS Code.",
+  "version": "1.0.0",
+  "description": "Reads OpenAI Codex responses aloud from the active VS Code Codex conversation.",
   "icon": "assets/CAC-logo.png",
   "main": "./dist/extension.js",
   "scripts": {
@@ -24,12 +24,12 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/trehand/CodexAudio.git"
+    "url": "https://github.com/TREHAND-Christian/CodexAudio.git"
   },
   "bugs": {
-    "url": "https://github.com/trehand/CodexAudio/issues"
+    "url": "https://github.com/TREHAND-Christian/CodexAudio/issues"
   },
-  "homepage": "https://github.com/trehand/CodexAudio#readme",
+  "homepage": "https://github.com/TREHAND-Christian/CodexAudio#readme",
   "type": "commonjs",
   "publisher": "trehand",
   "engines": {
@@ -38,7 +38,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "contributes": {
     "commands": [
       {

@@ -80,6 +80,79 @@
   --vscode-chat-linesAddedForeground: #54b054;
   --vscode-chat-linesRemovedForeground: #fc6a6a;
   --vscode-chat-checkpointSeparator: #585858;
+
+  --chat-inline-code-background: rgba(255, 255, 255, 0.12);
+  --chat-pre-background: #252526;
+  --chat-pre-border: #2f2f2f;
+  --chat-code-surface: #000000;
+  --chat-code-header-background: #252526;
+  --chat-copy-button-background: #2a2a2a;
+  --chat-copy-button-hover-background: #333333;
+  --chat-link-background: rgba(55, 148, 255, 0.15);
+  --chat-link-border: rgba(55, 148, 255, 0.25);
+}
+
+body.theme-light {
+  --vscode-foreground: #1f2328;
+  --vscode-descriptionForeground: rgba(31, 35, 40, 0.72);
+  --vscode-disabledForeground: rgba(31, 35, 40, 0.45);
+  --vscode-textLink-foreground: #0969da;
+  --vscode-textLink-activeForeground: #0550ae;
+  --vscode-textSeparator-foreground: rgba(31, 35, 40, 0.16);
+  --vscode-textPreformat-foreground: #953800;
+  --vscode-textPreformat-background: rgba(9, 105, 218, 0.08);
+  --vscode-textBlockQuote-background: #f6f8fa;
+  --vscode-textBlockQuote-border: rgba(9, 105, 218, 0.45);
+  --vscode-textCodeBlock-background: #f6f8fa;
+
+  --vscode-editor-background: #ffffff;
+  --vscode-editor-foreground: #1f2328;
+  --vscode-editorWidget-background: #f6f8fa;
+  --vscode-editorWidget-foreground: #1f2328;
+  --vscode-editorWidget-border: #d0d7de;
+  --vscode-editor-selectionBackground: #bfdbfe;
+  --vscode-editor-inactiveSelectionBackground: #eaeef2;
+  --vscode-editor-lineHighlightBorder: #d8dee4;
+
+  --vscode-scrollbar-shadow: rgba(31, 35, 40, 0.18);
+  --vscode-scrollbarSlider-background: rgba(31, 35, 40, 0.22);
+  --vscode-scrollbarSlider-hoverBackground: rgba(31, 35, 40, 0.34);
+  --vscode-scrollbarSlider-activeBackground: rgba(31, 35, 40, 0.48);
+
+  --vscode-widget-shadow: rgba(31, 35, 40, 0.16);
+  --vscode-widget-border: #d0d7de;
+
+  --vscode-input-background: #ffffff;
+  --vscode-input-foreground: #1f2328;
+  --vscode-input-placeholderForeground: #6e7781;
+
+  --vscode-button-foreground: #ffffff;
+  --vscode-button-background: #0969da;
+  --vscode-button-hoverBackground: #0550ae;
+  --vscode-button-secondaryForeground: #24292f;
+  --vscode-button-secondaryBackground: #f6f8fa;
+  --vscode-button-secondaryHoverBackground: #eaeef2;
+
+  --vscode-chat-requestBackground: rgba(246, 248, 250, 0.85);
+  --vscode-chat-requestBorder: rgba(31, 35, 40, 0.12);
+  --vscode-chat-requestBubbleBackground: rgba(9, 105, 218, 0.08);
+  --vscode-chat-requestBubbleHoverBackground: rgba(9, 105, 218, 0.14);
+  --vscode-chat-requestCodeBorder: rgba(9, 105, 218, 0.24);
+  --vscode-chat-slashCommandBackground: rgba(9, 105, 218, 0.1);
+  --vscode-chat-slashCommandForeground: #0969da;
+  --vscode-chat-linesAddedForeground: #1a7f37;
+  --vscode-chat-linesRemovedForeground: #cf222e;
+  --vscode-chat-checkpointSeparator: #d0d7de;
+
+  --chat-inline-code-background: rgba(9, 105, 218, 0.08);
+  --chat-pre-background: #f6f8fa;
+  --chat-pre-border: #d0d7de;
+  --chat-code-surface: #f6f8fa;
+  --chat-code-header-background: #eaeef2;
+  --chat-copy-button-background: #f6f8fa;
+  --chat-copy-button-hover-background: #eaeef2;
+  --chat-link-background: rgba(9, 105, 218, 0.08);
+  --chat-link-border: rgba(9, 105, 218, 0.22);
 }
 
 /* Scrollbar (QtWebEngine) */
@@ -141,7 +214,7 @@ li > p {
   font-family: var(--vscode-editor-font-family);
   font-size: 14px !important;
   line-height: 1.4; /* interligne: code inline */
-  background-color: #000000 !important;
+  background-color: var(--chat-code-surface) !important;
   padding: 2px 6px;
   border-radius: 6px;
 }
@@ -149,7 +222,7 @@ li > p {
 .text-size-code {
   font-family: var(--vscode-editor-font-family);
   font-size: 14px;
-  background-color: #000000;
+  background-color: var(--chat-code-surface);
   padding: 8px !important;
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
@@ -161,14 +234,14 @@ li > p {
 .whitespace-pre\! {
   white-space: pre;
   font-family: var(--vscode-editor-font-family);
-  background-color: #000000;
+  background-color: var(--chat-code-surface);
   line-height: 1.5; /* interligne: preserve espaces */
 }
 
 .text-size-code code,
 .text-size-code code span,
 .text-size-code * {
-  background-color: #000000 !important;
+  background-color: var(--chat-code-surface) !important;
   line-height: 1.5; /* interligne: descendants du code */
 }
 
@@ -191,7 +264,7 @@ p > a {
 code:not(.whitespace-pre\!) {
   font-family: var(--vscode-editor-font-family);
   color: var(--vscode-textPreformat-foreground);
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: var(--chat-inline-code-background);
   padding: 1px 4px;
   border-radius: 4px;
   font-size: 12px;
@@ -203,8 +276,8 @@ code:not(.whitespace-pre\!) {
 
 /* Bloc pre generique */
 pre {
-  background-color: #252526;
-  border: 1px solid #2f2f2f;
+  background-color: var(--chat-pre-background);
+  border: 1px solid var(--chat-pre-border);
   padding: 10px 12px;
   border-radius: 8px;
   overflow-x: auto;
@@ -276,7 +349,7 @@ th {
 }
 
 td {
-  background-color: #1f1f1f;
+  background-color: var(--vscode-editor-background);
 }
 
 /* Lien fichier */
@@ -286,9 +359,9 @@ td {
   gap: 4px;
   padding: 1px 6px;
   border-radius: 4px;
-  background-color: rgba(55, 148, 255, 0.15);
-  border: 1px solid rgba(55, 148, 255, 0.25);
-  color: #3794ff;
+  background-color: var(--chat-link-background);
+  border: 1px solid var(--chat-link-border);
+  color: var(--vscode-textLink-foreground);
   font-family: var(--vscode-font-family);
   font-size: 12px;
   line-height: 1.4;
@@ -307,7 +380,7 @@ p > a.chat-file-link {
 }
 
 .chat-file-name {
-  color: #3794ff;
+  color: var(--vscode-textLink-foreground);
 }
 
 /* Lien URL/email */
@@ -318,9 +391,9 @@ a.chat-link,
   gap: 4px;
   padding: 1px 6px;
   border-radius: 4px;
-  background-color: rgba(55, 148, 255, 0.15);
-  border: 1px solid rgba(55, 148, 255, 0.25);
-  color: #3794ff;
+  background-color: var(--chat-link-background);
+  border: 1px solid var(--chat-link-border);
+  color: var(--vscode-textLink-foreground);
   font-family: var(--vscode-font-family);
   font-size: 12px;
   line-height: 1.4;
@@ -334,8 +407,8 @@ a.chat-link,
   margin: 8px 0;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #3c3c3c;
-  background-color: rgba(10, 10, 10, 0.4);
+  border: 1px solid var(--vscode-widget-border);
+  background-color: var(--vscode-textCodeBlock-background);
   /* marge: entre bloc de code et paragraphes */
 }
 
@@ -345,7 +418,7 @@ a.chat-link,
   align-items: center;
   justify-content: space-between;
   padding: 5px 8px 5px 8px;
-  background-color: #252526;
+  background-color: var(--chat-code-header-background);
   color: var(--vscode-descriptionForeground);
   font-size: 12px;
   font-family: var(--vscode-font-family);
@@ -375,7 +448,7 @@ a.chat-link,
 .chat-code-body code {
   white-space: pre;
   color: inherit;
-  background: #000000;
+  background: var(--chat-code-surface);
   display: block;
 }
 
@@ -433,11 +506,11 @@ a.chat-link,
 }
 
 .bg-token-text-code-block-background\/10 {
-  background-color: #000000;
+  background-color: var(--chat-code-surface);
 }
 
 .border-token-input-background {
-  border-color: #3c3c3c;
+  border-color: var(--vscode-widget-border);
 }
 
 .rounded-lg {
@@ -450,7 +523,7 @@ a.chat-link,
 }
 
 .bg-token-side-bar-background {
-  background-color: #252526;
+  background-color: var(--chat-code-header-background);
 }
 
 .text-token-description-foreground {
@@ -466,7 +539,7 @@ a.chat-link,
 
 /* Preservation espaces */
 .text-size-code span {
-  background-color: #000000 !important;
+  background-color: var(--chat-code-surface) !important;
 }
 
 /* Bouton copier */
@@ -474,7 +547,7 @@ a.chat-link,
   width: 22px;
   height: 22px;
   border: 1px solid var(--vscode-widget-border);
-  background-color: #2a2a2a;
+  background-color: var(--chat-copy-button-background);
   border-radius: 6px;
   cursor: pointer;
   background-repeat: no-repeat;
@@ -484,7 +557,7 @@ a.chat-link,
 }
 
 .chat-code-copy:hover {
-  background-color: #333333;
+  background-color: var(--chat-copy-button-hover-background);
 }
 
 .chat-code-copy.copied {

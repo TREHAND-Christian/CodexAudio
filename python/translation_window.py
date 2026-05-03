@@ -28,6 +28,7 @@ try:
     from PySide6.QtCore import Qt, QTimer, QEvent
     from PySide6.QtGui import QDesktopServices
     from PySide6.QtWidgets import (
+        QApplication,
         QWidget,
         QTextBrowser,
         QVBoxLayout,
@@ -37,6 +38,7 @@ except Exception:  # pragma: no cover
     QTimer = None
     QEvent = None
     QDesktopServices = None
+    QApplication = None
     QWidget = None
     QTextBrowser = None
     QVBoxLayout = None
@@ -141,7 +143,7 @@ class TranslationWindow(QWidget):
         else:
             self.browser = QTextBrowser()
             self.browser.setOpenExternalLinks(False)
-            self.browser.setStyleSheet("background-color:#1e1e1e;color:#d4d4d4;border:none;")
+            self._apply_native_theme()
             try:
                 self.browser.anchorClicked.connect(self._on_textbrowser_anchor_clicked)
             except Exception:
@@ -200,6 +202,23 @@ class TranslationWindow(QWidget):
             except Exception:
                 pass
         super().changeEvent(event)
+
+    def _detect_theme(self) -> str:
+        try:
+            app = QApplication.instance() if QApplication is not None else None
+            if app is None:
+                return "dark"
+            color = app.palette().color(app.palette().Window)
+            return "light" if int(color.lightness()) >= 128 else "dark"
+        except Exception:
+            return "dark"
+
+    def _apply_native_theme(self) -> None:
+        if QTextBrowser is not None and isinstance(getattr(self, "browser", None), QTextBrowser):
+            if self._detect_theme() == "light":
+                self.browser.setStyleSheet("background-color:#ffffff;color:#1f2328;border:none;")
+            else:
+                self.browser.setStyleSheet("background-color:#1e1e1e;color:#d4d4d4;border:none;")
 
     def _on_textbrowser_anchor_clicked(self, url) -> None:
         try:
@@ -365,6 +384,7 @@ class TranslationWindow(QWidget):
 
     def _wrap_html(self, html_fragment: str) -> str:
         css = self._chat_css or ""
+        theme = self._detect_theme()
         script = (
             "<script>"
             "function copyCode(btn){"
@@ -390,7 +410,7 @@ class TranslationWindow(QWidget):
             "<!doctype html>"
             "<html><head><meta charset=\"utf-8\">"
             f"<style>{css}</style>{script}"
-            "</head><body class=\"chat-body\">"
+            f"</head><body class=\"chat-body theme-{theme}\">"
             "<div class=\"chat-root\">"
             "<div class=\"chat-message\">"
             f"{html_fragment}"
