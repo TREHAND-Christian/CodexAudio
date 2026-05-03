@@ -73,6 +73,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     translateAvailable: true,
     optionsVisible: false,
     deferStartupWindows: true,
+    backendInfoRetryCount: 0,
+    backendInfoRetryTimer: undefined as NodeJS.Timeout | undefined,
+    backendRestartCount: 0,
+    backendRestartTimer: undefined as NodeJS.Timeout | undefined,
     uiAnnounceSeq: 0,
     uiAnnouncePending: null as null | {
       token: number;
@@ -221,6 +225,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     try {
       backend.start(pythonPath, context.extensionPath);
       runtime.backendOk = true;
+      runtime.backendRestartCount = 0;
+      if (runtime.backendRestartTimer) {
+        clearTimeout(runtime.backendRestartTimer);
+        runtime.backendRestartTimer = undefined;
+      }
       output.appendLine(`[backend] started: ${pythonPath}`);
     } catch (e) {
       runtime.backendOk = false;
@@ -297,15 +306,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       runtime.voices = Array.isArray(voices) ? voices : [];
       runtime.availableLanguages = Array.isArray(langs) ? langs : [];
       runtime.translateAvailable = !!caps?.translate_available;
-      if (!hasVoiceForTargetLang() && runtime.state.autoReadNewResponses) {
-        runtime.state.autoReadNewResponses = false;
-        await saveState(context, runtime.state);
+      if (runtime.backendInfoRetryTimer) {
+        clearTimeout(runtime.backendInfoRetryTimer);
+        runtime.backendInfoRetryTimer = undefined;
+      }
+      if (runtime.voices.length === 0) {
+        scheduleBackendInfoRetry();
+      } else {
+        runtime.backendInfoRetryCount = 0;
+        const beforeVoice = runtime.state.ttsVoiceId;
+        applyVoiceForCurrentLang();
+        if (beforeVoice !== runtime.state.ttsVoiceId) {
+          await saveState(context, runtime.state);
+        }
       }
       if (!runtime.translateAvailable && runtime.state.translateEnabled) {
         runtime.state.translateEnabled = false;
         await saveState(context, runtime.state);
       }
       runtime.backendOk = true;
+      refreshUi();
     } catch (e) {
       runtime.backendOk = false;
       runtime.voices = [];
@@ -315,12 +335,38 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
+  function scheduleBackendInfoRetry(): void {
+    if (!backend.isRunning()) return;
+    if (runtime.backendInfoRetryTimer) return;
+    if (runtime.backendInfoRetryCount >= 6) return;
+    runtime.backendInfoRetryCount += 1;
+    runtime.backendInfoRetryTimer = setTimeout(() => {
+      runtime.backendInfoRetryTimer = undefined;
+      void refreshBackendInfo();
+    }, 2000);
+  }
+
+  function scheduleBackendRestart(): void {
+    if (runtime.backendRestartTimer) return;
+    if (runtime.backendRestartCount >= 3) return;
+    runtime.backendRestartCount += 1;
+    runtime.backendRestartTimer = setTimeout(() => {
+      runtime.backendRestartTimer = undefined;
+      void ensureBackend()
+        .then(() => refreshUi())
+        .catch(() => {
+          // ignore
+        });
+    }, 2500);
+  }
+
   function onBackendEvent(evt: BackendEvent): void {
     if (evt.type === "backend_exit") {
       runtime.backendOk = false;
       runtime.isSpeaking = false;
       runtime.isPaused = false;
       output.appendLine(`[backend] exit code=${evt.code} signal=${evt.signal ?? ""}`);
+      scheduleBackendRestart();
       output.show(true);
       refreshUi();
       return;
@@ -404,6 +450,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (evt.type === "log") {
       if (evt.message === "backend_ready") {
         void syncBackendWindows();
+        if (!runtime.voices.length) {
+          void refreshBackendInfo();
+        }
         return;
       }
       output.appendLine(evt.message);
@@ -429,14 +478,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     runtime.lastSourceText = text;
 
-    const shouldSpeakThisResponse =
+    const wantsAutoRead =
       runtime.state.autoReadNewResponses &&
       runtime.state.ttsEnabled &&
       !runtime.state.ttsMute &&
-      !runtime.state.appPaused &&
-      canSpeakForTarget();
+      !runtime.state.appPaused;
 
-    if (shouldSpeakThisResponse) {
+    if (wantsAutoRead) {
       try {
         await backend.request("stop");
       } catch {
@@ -464,6 +512,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const chosenVoice = String(res?.voice_id ?? runtime.state.ttsVoiceId);
     const queue = Array.isArray(res?.queue) ? (res.queue as string[]) : [];
     const normalizedQueue = normalizeQueue(queue, displayText);
+    const shouldSpeakThisResponse = wantsAutoRead && !!chosenVoice && normalizedQueue.length > 0;
 
     runtime.lastDetectedLang = detected || runtime.lastDetectedLang;
     runtime.lastSpokenLang = effective || runtime.lastSpokenLang;
@@ -498,7 +547,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     if (runtime.state.autoReadNewResponses && !shouldSpeakThisResponse) {
       output.appendLine(
-        `[auto-read] bloqué: ttsEnabled=${runtime.state.ttsEnabled} mute=${runtime.state.ttsMute} paused=${runtime.state.appPaused} canSpeak=${canSpeakForTarget()}`,
+        `[auto-read] bloqué: ttsEnabled=${runtime.state.ttsEnabled} mute=${runtime.state.ttsMute} paused=${runtime.state.appPaused} voiceReady=${!!chosenVoice} queue=${normalizedQueue.length}`,
       );
     }
 
@@ -596,9 +645,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const ui = baseLang(String(patch.uiLang));
         runtime.state.uiLang = ui;
         applyVoiceForCurrentLang();
-        if (!hasVoiceForUiLang() && runtime.state.autoReadNewResponses) {
-          runtime.state.autoReadNewResponses = false;
-        }
       }
 
       if (patch.translateEnabled === false) {
