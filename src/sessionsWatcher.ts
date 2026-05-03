@@ -6,6 +6,7 @@ import fg from "fast-glob";
 export type SessionsWatcherEvent =
   | { type: "log"; message: string }
   | { type: "file"; file: string }
+  | { type: "loaded"; text: string; key: string; source: "codex_sessions"; file: string }
   | { type: "message"; text: string; key: string; source: "codex_sessions"; initial?: boolean };
 
 export type SessionsWatcherOptions = {
@@ -17,11 +18,14 @@ export type SessionsWatcherOptions = {
   pattern: string;
   scrubKeys: string[];
   workspaceRoot?: string;
+  codexLogRecentMs: number;
+  codexLogFile?: string;
 };
 
 type AssistantHit = { text: string; key: string; ts: number; cwd?: string };
 type RolloutSummary = { last?: AssistantHit; cwd?: string };
 type LatestRollout = { file: string; last?: AssistantHit; cwd?: string };
+type CodexLogCandidate = { file: string; mtimeMs: number };
 
 const DEFAULT_SCRUB_KEYS = [
   "tts",
@@ -41,6 +45,10 @@ export class CodexSessionsWatcher {
   private timer: NodeJS.Timeout | undefined;
   private currentFile: string | undefined;
   private currentFileCwd: string | undefined;
+  private activeConversationId = "";
+  private codexLogFile: string | undefined;
+  private codexLogPos = 0;
+  private readonly startedAt = Date.now();
   private pos = 0;
   private lastEmittedKey = "";
   private lastScrubAt = 0;
@@ -59,6 +67,7 @@ export class CodexSessionsWatcher {
       scrubMinIntervalMs: 2000,
       pattern: "**/rollout-*.jsonl",
       scrubKeys: DEFAULT_SCRUB_KEYS,
+      codexLogRecentMs: 45_000,
       ...opts,
     };
   }
@@ -88,14 +97,22 @@ export class CodexSessionsWatcher {
     return path.join(home, ".codex", "sessions");
   }
 
-  private async findLatestRollout(): Promise<LatestRollout | undefined> {
+  private vscodeLogsRoot(): string {
+    const appData = process.env.APPDATA || "";
+    if (appData) return path.join(appData, "Code", "logs");
+    const home = process.env.USERPROFILE || process.env.HOME || "";
+    return path.join(home, "AppData", "Roaming", "Code", "logs");
+  }
+
+  private async findActiveRollout(conversationId: string): Promise<LatestRollout | undefined> {
+    if (!conversationId) return undefined;
     const root = this.sessionsRoot();
     try {
       await fsp.access(root);
     } catch {
       return undefined;
     }
-    const files = await fg(this.opts.pattern, {
+    const files = await fg(`**/rollout-*${conversationId}.jsonl`, {
       cwd: root,
       absolute: true,
       onlyFiles: true,
@@ -123,6 +140,107 @@ export class CodexSessionsWatcher {
     if (!best) return undefined;
     const summary = await this.readRolloutSummary(best.file);
     return { file: best.file, last: summary.last, cwd: summary.cwd };
+  }
+
+  private async findLatestCodexLog(): Promise<CodexLogCandidate | undefined> {
+    if (this.opts.codexLogFile) {
+      try {
+        const st = await fsp.stat(this.opts.codexLogFile);
+        return { file: this.opts.codexLogFile, mtimeMs: st.mtimeMs || 0 };
+      } catch {
+        return undefined;
+      }
+    }
+
+    const root = this.vscodeLogsRoot();
+    try {
+      await fsp.access(root);
+    } catch {
+      return undefined;
+    }
+    const files = await fg("*/window*/exthost/openai.chatgpt/Codex.log", {
+      cwd: root,
+      absolute: true,
+      onlyFiles: true,
+      dot: true,
+      suppressErrors: true,
+    });
+    let best: CodexLogCandidate | undefined;
+    for (const file of files) {
+      try {
+        const st = await fsp.stat(file);
+        const mtimeMs = st.mtimeMs || 0;
+        if (!best || mtimeMs > best.mtimeMs) best = { file, mtimeMs };
+      } catch {
+        // ignore
+      }
+    }
+    return best;
+  }
+
+  private parseCodexLogTimestamp(line: string): number | null {
+    const match = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}\.\d{3})/.exec(line);
+    if (!match) return null;
+    const t = Date.parse(`${match[1]}T${match[2]}`);
+    return Number.isNaN(t) ? null : t;
+  }
+
+  private parseConversationResume(line: string, allowOld: boolean): string | undefined {
+    const match = /maybe_resume_success conversationId=([0-9a-f-]+)/i.exec(line);
+    if (!match) return undefined;
+    if (!allowOld) {
+      const ts = this.parseCodexLogTimestamp(line);
+      const minTs = Math.max(this.startedAt - 5_000, Date.now() - this.opts.codexLogRecentMs);
+      if (!ts || ts < minTs) return undefined;
+    }
+    return match[1];
+  }
+
+  private async updateActiveConversationFromCodexLog(): Promise<void> {
+    const latestLog = await this.findLatestCodexLog();
+    if (!latestLog) return;
+
+    const changedLog = latestLog.file !== this.codexLogFile;
+    if (changedLog) {
+      this.codexLogFile = latestLog.file;
+      this.codexLogPos = 0;
+    }
+
+    let st: fs.Stats;
+    try {
+      st = await fsp.stat(latestLog.file);
+    } catch {
+      return;
+    }
+
+    if (this.codexLogPos > st.size) this.codexLogPos = 0;
+    const isFirstRead = this.codexLogPos === 0;
+    const start = isFirstRead ? Math.max(0, st.size - 256_000) : this.codexLogPos;
+    if (st.size <= start) {
+      this.codexLogPos = st.size;
+      return;
+    }
+
+    const fd = await fsp.open(latestLog.file, "r");
+    try {
+      const buf = Buffer.alloc(st.size - start);
+      await fd.read(buf, 0, buf.length, start);
+      const text = buf.toString("utf8");
+      for (const line of text.split(/\r?\n/g)) {
+        const id = this.parseConversationResume(line, !isFirstRead);
+        if (id && id !== this.activeConversationId) {
+          this.activeConversationId = id;
+          this.currentFile = undefined;
+          this.currentFileCwd = undefined;
+          this.pos = 0;
+          this.lastEmittedKey = "";
+          this.onEvent({ type: "log", message: `[sessions] conversation Codex active: ${id}` });
+        }
+      }
+    } finally {
+      await fd.close();
+      this.codexLogPos = st.size;
+    }
   }
 
   private parseTimestamp(obj: Record<string, unknown>): number | null {
@@ -274,22 +392,35 @@ export class CodexSessionsWatcher {
   }
 
   private async tick(): Promise<void> {
-    const latest = await this.findLatestRollout();
+    await this.updateActiveConversationFromCodexLog();
+    if (!this.activeConversationId) return;
+
+    const latest = await this.findActiveRollout(this.activeConversationId);
     if (!latest) return;
 
     if (latest.file !== this.currentFile) {
       this.currentFile = latest.file;
       this.currentFileCwd = latest.last?.cwd ?? latest.cwd;
       this.onEvent({ type: "file", file: latest.file });
-      if (this.opts.readLastOnStart && latest.last && latest.last.key !== this.lastEmittedKey) {
+      if (latest.last && latest.last.key !== this.lastEmittedKey) {
         this.lastEmittedKey = latest.last.key;
-        this.onEvent({
-          type: "message",
-          text: latest.last.text,
-          key: latest.last.key,
-          source: "codex_sessions",
-          initial: this.opts.readLastOnStart,
-        });
+        if (this.opts.readLastOnStart) {
+          this.onEvent({
+            type: "message",
+            text: latest.last.text,
+            key: latest.last.key,
+            source: "codex_sessions",
+            initial: true,
+          });
+        } else {
+          this.onEvent({
+            type: "loaded",
+            text: latest.last.text,
+            key: latest.last.key,
+            source: "codex_sessions",
+            file: latest.file,
+          });
+        }
       } else if (latest.last) {
         this.lastEmittedKey = latest.last.key;
       }

@@ -101,6 +101,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     readLastOnStart: false,
     scrubTtsFields: getCfgBool("scrubTtsFields", true),
     workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "",
+    codexLogFile: resolveCodexLogFile(),
   });
   watcher.start();
   context.subscriptions.push({ dispose: () => watcher.stop() });
@@ -461,13 +462,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   function onWatcherEvent(evt: SessionsWatcherEvent): void {
+    if (evt.type === "loaded") {
+      void onNewAssistantMessage(evt.text, true, false);
+      return;
+    }
     if (evt.type === "message") {
-      void onNewAssistantMessage(evt.text, evt.initial === true);
+      void onNewAssistantMessage(evt.text, evt.initial === true, true);
       return;
     }
   }
 
-  async function onNewAssistantMessage(text: string, isInitial: boolean): Promise<void> {
+  async function onNewAssistantMessage(text: string, isInitial: boolean, allowSpeak: boolean): Promise<void> {
     if (runtime.state.appPaused) return;
     await ensureBackend();
     if (!runtime.backendOk) return;
@@ -479,6 +484,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     runtime.lastSourceText = text;
 
     const wantsAutoRead =
+      allowSpeak &&
       runtime.state.autoReadNewResponses &&
       runtime.state.ttsEnabled &&
       !runtime.state.ttsMute &&
@@ -988,6 +994,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       label: pythonPath,
       expectedPython: expectsExplicitPython ? trimmedPythonPath : "",
     };
+  }
+
+  function resolveCodexLogFile(): string | undefined {
+    const ownLogDir = context.logUri?.fsPath || "";
+    if (!ownLogDir) return undefined;
+    const exthostDir = path.dirname(ownLogDir);
+    return path.join(exthostDir, "openai.chatgpt", "Codex.log");
   }
 
   function resolvePythonPath(): string | undefined {
