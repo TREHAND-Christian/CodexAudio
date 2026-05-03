@@ -43,8 +43,6 @@ export class CodexSessionsWatcher {
   private currentFileCwd: string | undefined;
   private pos = 0;
   private lastEmittedKey = "";
-  private initialized = false;
-  private readonly startedAt = Date.now();
   private lastScrubAt = 0;
   private scrubPending = false;
 
@@ -275,44 +273,6 @@ export class CodexSessionsWatcher {
     return undefined;
   }
 
-  private async primeLastMessage(file: string): Promise<void> {
-    if (!this.opts.readLastOnStart) return;
-    let last: { text: string; key: string; cwd?: string } | undefined;
-    let currentCwd: string | undefined;
-    try {
-      const raw = await fsp.readFile(file, "utf8");
-      for (const line of raw.split(/\r?\n/g)) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        try {
-          const obj = JSON.parse(trimmed) as unknown;
-          if (
-            obj &&
-            typeof obj === "object" &&
-            (obj as any).type === "turn_context" &&
-            (obj as any).payload &&
-            typeof (obj as any).payload === "object" &&
-            typeof (obj as any).payload.cwd === "string"
-          ) {
-            currentCwd = String((obj as any).payload.cwd);
-          }
-          const res = this.extractAssistantText(obj);
-          if (res && this.matchesWorkspace(currentCwd)) {
-            last = { ...res, cwd: currentCwd };
-          }
-        } catch {
-          // ignore
-        }
-      }
-    } catch {
-      return;
-    }
-    if (last && last.key !== this.lastEmittedKey) {
-      this.lastEmittedKey = last.key;
-      this.onEvent({ type: "message", text: last.text, key: last.key, source: "codex_sessions", initial: true });
-    }
-  }
-
   private async tick(): Promise<void> {
     const latest = await this.findLatestRollout();
     if (!latest) return;
@@ -321,25 +281,7 @@ export class CodexSessionsWatcher {
       this.currentFile = latest.file;
       this.currentFileCwd = latest.last?.cwd ?? latest.cwd;
       this.onEvent({ type: "file", file: latest.file });
-      const isNewSinceWatcherStart = !!latest.last && latest.last.ts >= this.startedAt;
-      if (!this.initialized) {
-        if (isNewSinceWatcherStart && latest.last && latest.last.key !== this.lastEmittedKey) {
-          this.lastEmittedKey = latest.last.key;
-          this.onEvent({
-            type: "message",
-            text: latest.last.text,
-            key: latest.last.key,
-            source: "codex_sessions",
-          });
-        } else if (latest.last) {
-          this.lastEmittedKey = latest.last.key;
-        }
-        this.initialized = true;
-      } else if (
-        latest.last &&
-        latest.last.key !== this.lastEmittedKey &&
-        (this.opts.readLastOnStart || latest.last.ts >= this.startedAt)
-      ) {
+      if (this.opts.readLastOnStart && latest.last && latest.last.key !== this.lastEmittedKey) {
         this.lastEmittedKey = latest.last.key;
         this.onEvent({
           type: "message",
@@ -348,6 +290,8 @@ export class CodexSessionsWatcher {
           source: "codex_sessions",
           initial: this.opts.readLastOnStart,
         });
+      } else if (latest.last) {
+        this.lastEmittedKey = latest.last.key;
       }
       if (this.opts.scrubTtsFields) {
         this.scrubPending = true;
@@ -368,7 +312,7 @@ export class CodexSessionsWatcher {
       try {
         const st = await fd.stat();
         const size = st.size;
-        if (this.pos > size) this.pos = 0;
+        if (this.pos > size) this.pos = size;
         if (size === this.pos) {
           // nothing new
         } else {
