@@ -30,6 +30,12 @@ $backendEntry = Join-Path $root "python\codex_audio_backend.py"
   --add-data "${iconIco};assets" `
   --add-data "${iconPng};assets" `
   --add-data "${chatCss};python" `
+  --exclude-module "PySide6.QtWebEngineCore" `
+  --exclude-module "PySide6.QtWebEngineWidgets" `
+  --exclude-module "PySide6.QtWebEngineQuick" `
+  --exclude-module "PySide6.QtQml" `
+  --exclude-module "PySide6.QtQuick" `
+  --exclude-module "PySide6.QtQuickControls2" `
   --hidden-import "winsdk.windows.media.speechsynthesis" `
   --hidden-import "winsdk.windows.media.core" `
   --hidden-import "winsdk.windows.media.playback" `
