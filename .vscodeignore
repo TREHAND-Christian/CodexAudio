@@ -1,0 +1,18 @@
+.vscode/**
+.venv/**
+.venv - Copie/**
+.venv*/**
+node_modules/**
+src/**
+scripts/**
+txt_tmp/**
+build/**
+*.vsix
+codexaudio-*.vsix
+codexaudio-latest.vsix
+*.log
+*.ts
+*.pyc
+**/__pycache__/**
+tsconfig.json
+package-lock.json
