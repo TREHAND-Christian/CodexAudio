@@ -1047,7 +1047,33 @@ def main() -> int:
             # If comparison fails, continue.
             pass
 
+    if os.name == "nt":
+        try:
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("trehand.CodexAudio")
+        except Exception:
+            pass
+
     app = QApplication(sys.argv)
+    try:
+        app.setApplicationName("CodexAudio")
+    except Exception:
+        pass
+    try:
+        if hasattr(app, "setApplicationDisplayName"):
+            app.setApplicationDisplayName("CodexAudio")
+    except Exception:
+        pass
+    try:
+        if hasattr(app, "setDesktopFileName"):
+            app.setDesktopFileName("CodexAudio")
+    except Exception:
+        pass
+    try:
+        icon_path = Path(__file__).resolve().parent.parent / "assets" / "CAC-logo.ico"
+        if QIcon is not None and icon_path.exists():
+            app.setWindowIcon(QIcon(str(icon_path)))
+    except Exception:
+        pass
     app.setQuitOnLastWindowClosed(False)
     _event({"type": "log", "message": "backend_ready"})
 
