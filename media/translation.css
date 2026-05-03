@@ -1,0 +1,34 @@
+:root {
+  color-scheme: light dark;
+  --ca-accent: var(--vscode-button-background);
+  --ca-bg: color-mix(in srgb, var(--vscode-editor-background) 88%, #000 12%);
+  --ca-bg-2: color-mix(in srgb, var(--vscode-sideBar-background) 92%, #000 8%);
+  --ca-surface: color-mix(in srgb, var(--vscode-editorWidget-background) 84%, #000 16%);
+  --ca-border: color-mix(in srgb, var(--vscode-panel-border) 70%, transparent 30%);
+  --ca-radius: 12px;
+  --ca-muted: var(--vscode-descriptionForeground);
+}
+
+body {
+  font-family: var(--vscode-font-family);
+  padding: 12px;
+  color: var(--vscode-foreground);
+  background: radial-gradient(circle at top, var(--ca-bg-2) 0%, var(--ca-bg) 55%, var(--vscode-editor-background) 100%);
+}
+
+#title {
+  font-weight: 700;
+  margin-bottom: 10px;
+  letter-spacing: 0.02em;
+  color: var(--ca-muted);
+}
+
+.bubble {
+  background: var(--ca-surface);
+  border: 1px solid var(--ca-border);
+  border-radius: var(--ca-radius);
+  padding: 12px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}

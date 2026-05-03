@@ -1,0 +1,136 @@
+{
+  "name": "codexaudio",
+  "displayName": "CodexAudio",
+  "version": "0.0.42",
+  "description": "Lit à voix haute les réponses Codex de la conversation active détectée via les logs VS Code.",
+  "icon": "assets/CAC-logo.png",
+  "main": "./dist/extension.js",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "compile": "npm run typecheck && node ./scripts/build.mjs",
+    "build:backend": "powershell -ExecutionPolicy Bypass -File ./scripts/build-backend-exe.ps1",
+    "watch": "node ./scripts/build.mjs --watch",
+    "package": "npm run compile && npm run build:backend && npx @vscode/vsce package --no-dependencies",
+    "vscode:prepublish": "npm run compile"
+  },
+  "keywords": [
+    "vscode",
+    "codex",
+    "tts",
+    "text-to-speech",
+    "translation"
+  ],
+  "author": "trehand",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trehand/CodexAudio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/trehand/CodexAudio/issues"
+  },
+  "homepage": "https://github.com/trehand/CodexAudio#readme",
+  "type": "commonjs",
+  "publisher": "trehand",
+  "engines": {
+    "vscode": "^1.108.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      {
+        "command": "codexAudio.openOptions",
+        "title": "CodexAudio: Ouvrir Options"
+      },
+      {
+        "command": "codexAudio.openTranslation",
+        "title": "CodexAudio: Ouvrir Traduction"
+      },
+      {
+        "command": "codexAudio.playPause",
+        "title": "CodexAudio: Lecture / Pause"
+      },
+      {
+        "command": "codexAudio.stop",
+        "title": "CodexAudio: Stop"
+      },
+      {
+        "command": "codexAudio.toggleMute",
+        "title": "CodexAudio: Muet"
+      },
+      {
+        "command": "codexAudio.togglePauseService",
+        "title": "CodexAudio: Pause Service"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codexAudio",
+          "title": "CodexAudio",
+          "icon": "assets/CAC-logo.png"
+        }
+      ]
+    },
+    "views": {
+      "codexAudio": [
+        {
+          "id": "codexAudio.options",
+          "name": "Options",
+          "type": "webview",
+          "icon": "assets/conf.svg"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "-workbench.action.terminal.runRecentCommand",
+        "key": "ctrl+alt+r",
+        "when": "terminalFocus"
+      },
+      {
+        "command": "workbench.action.reloadWindow",
+        "key": "ctrl+alt+r"
+      }
+    ],
+    "configuration": {
+      "title": "CodexAudio",
+      "properties": {
+        "codexAudio.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Commande ou chemin vers python.exe utilise pour TTS/Traduction. Exemple: python ou C:\\\\chemin\\\\vers\\\\python.exe."
+        },
+        "codexAudio.pollIntervalMs": {
+          "type": "number",
+          "default": 500,
+          "minimum": 100,
+          "description": "Intervalle de surveillance des logs VS Code et sessions Codex (ms)."
+        },
+        "codexAudio.readLastOnStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Option legacy: lire la dernière réponse assistant au démarrage. Désactivé par défaut."
+        },
+        "codexAudio.scrubTtsFields": {
+          "type": "boolean",
+          "default": false,
+          "description": "Option legacy: nettoie certains champs TTS dans les JSONL (best-effort). Désactivé par défaut."
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "@types/vscode": "^1.108.1",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.9.3"
+  }
+}

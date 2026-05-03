@@ -1,0 +1,523 @@
+/* Variables globales de theme */
+:root {
+  /* Espacements texte */
+  --lh-body: 1.15; /* interligne global par defaut (body) */
+  --lh-message: 1.5; /* interligne texte principal (.chat-message) */
+  --lh-p: 1.4; /* interligne paragraphes (p) */
+  --lh-li: 3.5; /* interligne listes (reserve) */
+  --m-p: 0; /* marge entre paragraphes (p) */
+  --m-li: 1.3rem; /* espace entre elements de liste (li) */
+  --m-ul: 1.0rem 0; /* marge entre blocs de listes (ul, ol, ul.chat-ul) */
+  --m-br: 0; /* marge entre lignes forcees (<br>) */
+  --m-blockquote: 8px 0; /* marge entre citation et texte (blockquote) */
+  --m-hr: 12px 0; /* marge autour du separateur (hr) */
+  --pad-cell-y: 6px; /* padding vertical cellules (th, td) */
+  --pad-cell-x: 8px; /* padding horizontal cellules (th, td) */
+  --pad-body: 10px 16px 16px 16px; /* padding global (body) */
+  --m-root: 0; /* marge du conteneur global (.chat-root) */
+  --vscode-font-family: "Segoe WPC", "Segoe UI", sans-serif;
+  --vscode-font-weight: normal;
+  --vscode-font-size: 13px;
+  --vscode-editor-font-family: Consolas, "Courier New", monospace;
+  --vscode-editor-font-weight: normal;
+  --vscode-editor-font-size: 12px;
+  --vscode-chat-font-size: 13px;
+  --text-link-decoration: none;
+
+  --vscode-foreground: #cccccc;
+  --vscode-descriptionForeground: rgba(204, 204, 204, 0.7);
+  --vscode-disabledForeground: rgba(204, 204, 204, 0.5);
+  --vscode-textLink-foreground: #3794ff;
+  --vscode-textLink-activeForeground: #3794ff;
+  --vscode-textSeparator-foreground: rgba(255, 255, 255, 0.18);
+  --vscode-textPreformat-foreground: #d7ba7d;
+  --vscode-textPreformat-background: rgba(255, 255, 255, 0.1);
+  --vscode-textBlockQuote-background: #222222;
+  --vscode-textBlockQuote-border: rgba(0, 122, 204, 0.5);
+  --vscode-textCodeBlock-background: rgba(10, 10, 10, 0.4);
+
+  --vscode-editor-background: #1e1e1e;
+  --vscode-editor-foreground: #d4d4d4;
+  --vscode-editorWidget-background: #252526;
+  --vscode-editorWidget-foreground: #cccccc;
+  --vscode-editorWidget-border: #454545;
+  --vscode-editor-selectionBackground: #264f78;
+  --vscode-editor-inactiveSelectionBackground: #3a3d41;
+  --vscode-editor-selectionHighlightBackground: rgba(173, 214, 255, 0.15);
+  --vscode-editor-hoverHighlightBackground: rgba(38, 79, 120, 0.25);
+  --vscode-editor-findMatchBackground: #515c6a;
+  --vscode-editor-findMatchHighlightBackground: rgba(234, 92, 0, 0.33);
+  --vscode-editor-rangeHighlightBackground: rgba(58, 61, 65, 0.4);
+  --vscode-editor-lineHighlightBorder: #282828;
+  --vscode-editor-lineHighlightBackground: transparent;
+
+  --vscode-scrollbar-shadow: #000000;
+  --vscode-scrollbarSlider-background: rgba(121, 121, 121, 0.4);
+  --vscode-scrollbarSlider-hoverBackground: rgba(100, 100, 100, 0.7);
+  --vscode-scrollbarSlider-activeBackground: rgba(191, 191, 191, 0.4);
+
+  --vscode-widget-shadow: rgba(0, 0, 0, 0.36);
+  --vscode-widget-border: #303031;
+
+  --vscode-input-background: #3c3c3c;
+  --vscode-input-foreground: #cccccc;
+  --vscode-input-placeholderForeground: #a6a6a6;
+
+  --vscode-button-foreground: #ffffff;
+  --vscode-button-background: #0e639c;
+  --vscode-button-hoverBackground: #1177bb;
+  --vscode-button-secondaryForeground: #ffffff;
+  --vscode-button-secondaryBackground: #3a3d41;
+  --vscode-button-secondaryHoverBackground: #45494e;
+
+  --vscode-chat-requestBackground: rgba(30, 30, 30, 0.62);
+  --vscode-chat-requestBorder: rgba(255, 255, 255, 0.1);
+  --vscode-chat-requestBubbleBackground: rgba(38, 79, 120, 0.3);
+  --vscode-chat-requestBubbleHoverBackground: rgba(38, 79, 120, 0.6);
+  --vscode-chat-requestCodeBorder: rgba(0, 73, 114, 0.72);
+  --vscode-chat-slashCommandBackground: rgba(38, 71, 120, 0.4);
+  --vscode-chat-slashCommandForeground: #85b6ff;
+  --vscode-chat-linesAddedForeground: #54b054;
+  --vscode-chat-linesRemovedForeground: #fc6a6a;
+  --vscode-chat-checkpointSeparator: #585858;
+}
+
+/* Scrollbar (QtWebEngine) */
+html {
+  scrollbar-color: var(--vscode-scrollbarSlider-background) var(--vscode-editor-background);
+}
+
+/* Styles globaux */
+body {
+  margin: 0;
+  padding: var(--pad-body);
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  font-family: var(--vscode-font-family);
+  font-weight: var(--vscode-font-weight);
+  font-size: var(--vscode-chat-font-size);
+  line-height: var(--lh-body);
+  /* interligne: texte global par defaut */
+}
+
+/* Conteneur principal */
+.chat-root {
+  max-width: 100%;
+  margin: var(--m-root);
+  /* marge: contour global du texte */
+}
+
+/* Texte (interligne defini) */
+.chat-message {
+  white-space: normal;
+  word-break: break-word;
+  line-height: var(--lh-message); /* interligne: texte principal */
+}
+
+p {
+  margin: var(--m-p);
+  line-height: var(--lh-p); /* interligne: paragraphes */
+  /* marge: entre paragraphes et elements voisins */
+}
+
+br {
+  display: block;
+  margin-bottom: var(--m-br);
+}
+
+li {
+  margin: 0;
+  line-height: var(--lh-message); /* interligne: lignes dans puces */
+  /* marge: geree par les regles ul/ol li + li */
+}
+
+li > p {
+  margin: 0;
+  line-height: var(--lh-message); /* interligne: lignes dans puces */
+}
+
+.chat-inline-code {
+  display: inline-block;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 14px !important;
+  line-height: 1.4; /* interligne: code inline */
+  background-color: #000000 !important;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.text-size-code {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 14px;
+  background-color: #000000;
+  padding: 8px !important;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  line-height: 1.5; /* interligne: bloc de code */
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.whitespace-pre\! {
+  white-space: pre;
+  font-family: var(--vscode-editor-font-family);
+  background-color: #000000;
+  line-height: 1.5; /* interligne: preserve espaces */
+}
+
+.text-size-code code,
+.text-size-code code span,
+.text-size-code * {
+  background-color: #000000 !important;
+  line-height: 1.5; /* interligne: descendants du code */
+}
+
+/* Texte (sans interligne defini) */
+a,
+a code {
+  color: var(--vscode-textLink-foreground);
+  /* marge: s'aligne sur le flux du texte (pas de marge propre) */
+}
+
+a:hover {
+  color: var(--vscode-textLink-activeForeground);
+}
+
+p > a {
+  text-decoration: var(--text-link-decoration);
+  /* marge: entre lien et paragraphe -> herite du paragraphe */
+}
+
+code:not(.whitespace-pre\!) {
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-textPreformat-foreground);
+  background-color: rgba(255, 255, 255, 0.12);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.chat-inline-code span {
+  background-color: transparent !important;
+}
+
+/* Bloc pre generique */
+pre {
+  background-color: #252526;
+  border: 1px solid #2f2f2f;
+  padding: 10px 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+pre code {
+  padding: 0;
+  background-color: transparent;
+}
+
+/* Citations */
+blockquote {
+  background: var(--vscode-textBlockQuote-background);
+  border-left: 3px solid var(--vscode-textBlockQuote-border);
+  margin: var(--m-blockquote);
+  padding: 6px 10px;
+  /* marge: entre citation et texte */
+}
+
+/* Listes */
+ul,
+ol {
+  margin: var(--m-ul);
+  padding-left: 0;
+  margin-left: 0;
+  list-style-position: inside;
+  list-style-type: disc;
+  /* marge: entre bloc de liste et paragraphes */
+}
+
+ul.chat-ul {
+  margin: var(--m-ul);
+  padding-left: 0;
+  list-style-position: inside;
+  list-style-type: disc;
+  /* marge: entre liste normalisee et paragraphes */
+}
+
+ul li + li,
+ol li + li {
+  margin-top: var(--m-li);
+}
+
+/* Separateur */
+hr {
+  border: none;
+  border-top: 1px solid var(--vscode-textSeparator-foreground);
+  margin: var(--m-hr);
+  /* marge: entre separateur et texte */
+}
+
+/* Tableau */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  /* marge: aucune par defaut (ajouter margin si besoin) */
+}
+
+/* Cellules */
+th,
+td {
+  border: 1px solid var(--vscode-widget-border);
+  padding: var(--pad-cell-y) var(--pad-cell-x);
+  /* marge: pas d'espacement externe, padding interne uniquement */
+}
+
+th {
+  background-color: #2a2d2e;
+}
+
+td {
+  background-color: #1f1f1f;
+}
+
+/* Lien fichier */
+.chat-file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background-color: rgba(55, 148, 255, 0.15);
+  border: 1px solid rgba(55, 148, 255, 0.25);
+  color: #3794ff;
+  font-family: var(--vscode-font-family);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  /* marge: pas d'espacement externe (uniquement padding interne) */
+  text-decoration: none !important;
+  text-decoration-line: none !important;
+}
+
+.chat-file-link:hover,
+.chat-file-link:focus,
+.chat-file-link:active,
+p > a.chat-file-link {
+  text-decoration: none !important;
+  text-decoration-line: none !important;
+}
+
+.chat-file-name {
+  color: #3794ff;
+}
+
+/* Lien URL/email */
+a.chat-link,
+.chat-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background-color: rgba(55, 148, 255, 0.15);
+  border: 1px solid rgba(55, 148, 255, 0.25);
+  color: #3794ff;
+  font-family: var(--vscode-font-family);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  text-decoration: none;
+  /* marge: pas d'espacement externe (uniquement padding interne) */
+}
+
+/* Bloc de code */
+.chat-code-block {
+  margin: 8px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #3c3c3c;
+  background-color: rgba(10, 10, 10, 0.4);
+  /* marge: entre bloc de code et paragraphes */
+}
+
+/* En-tete bloc de code */
+.chat-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px 5px 8px;
+  background-color: #252526;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  font-family: var(--vscode-font-family);
+}
+
+.chat-code-lang {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Corps bloc de code */
+.chat-code-body {
+  padding: 5px;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+
+.chat-code-body pre {
+  margin: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.chat-code-body code {
+  white-space: pre;
+  color: inherit;
+  background: #000000;
+  display: block;
+}
+
+.chat-code-body code .k,
+.chat-code-body code .kd,
+.chat-code-body code .kn,
+.chat-code-body code .kp,
+.chat-code-body code .kr,
+.chat-code-body code .kt {
+  color: #569cd6;
+}
+
+.chat-code-body code .nf,
+.chat-code-body code .fm {
+  color: #dcdcaa;
+}
+
+.chat-code-body code .nb,
+.chat-code-body code .bp,
+.chat-code-body code .nc {
+  color: #4ec9b0;
+}
+
+.chat-code-body code .s,
+.chat-code-body code .s1,
+.chat-code-body code .s2,
+.chat-code-body code .sa,
+.chat-code-body code .sb,
+.chat-code-body code .sc,
+.chat-code-body code .sd,
+.chat-code-body code .se,
+.chat-code-body code .sh,
+.chat-code-body code .si,
+.chat-code-body code .sx,
+.chat-code-body code .sr,
+.chat-code-body code .ss {
+  color: #ce9178;
+}
+
+.chat-code-body code .c,
+.chat-code-body code .ch,
+.chat-code-body code .cm,
+.chat-code-body code .c1,
+.chat-code-body code .cs {
+  color: #6a9955;
+}
+
+.chat-code-body code .m,
+.chat-code-body code .mi,
+.chat-code-body code .mf,
+.chat-code-body code .mh,
+.chat-code-body code .il,
+.chat-code-body code .mo {
+  color: #b5cea8;
+}
+
+.bg-token-text-code-block-background\/10 {
+  background-color: #000000;
+}
+
+.border-token-input-background {
+  border-color: #3c3c3c;
+}
+
+.rounded-lg {
+  border-radius: 8px;
+}
+
+.rounded-t-lg {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.bg-token-side-bar-background {
+  background-color: #252526;
+}
+
+.text-token-description-foreground {
+  color: rgba(204, 204, 204, 0.7);
+}
+
+.bg-token-text-code-block-background\/10 > .bg-token-side-bar-background {
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+/* Preservation espaces */
+.text-size-code span {
+  background-color: #000000 !important;
+}
+
+/* Bouton copier */
+.chat-code-copy {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--vscode-widget-border);
+  background-color: #2a2a2a;
+  border-radius: 6px;
+  cursor: pointer;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23cccccc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='13' height='13' rx='2'/><path d='M5 15V5a2 2 0 0 1 2-2h10'/></svg>");
+}
+
+.chat-code-copy:hover {
+  background-color: #333333;
+}
+
+.chat-code-copy.copied {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2354b054' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
+}
+
+
+
+/* Media responsif */
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Scrollbar (WebKit) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-corner {
+  background-color: var(--vscode-editor-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--vscode-scrollbarSlider-background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--vscode-scrollbarSlider-activeBackground);
+}
