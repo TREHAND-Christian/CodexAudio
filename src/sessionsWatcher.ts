@@ -6,6 +6,13 @@ import fg from "fast-glob";
 export type SessionsWatcherEvent =
   | { type: "log"; message: string }
   | { type: "file"; file: string }
+  | {
+      type: "codex_session";
+      action: "ouverture" | "fermeture";
+      id: string;
+      name?: string;
+      source: "codex_app_server";
+    }
   | { type: "loaded"; text: string; key: string; source: "codex_sessions"; file: string }
   | { type: "message"; text: string; key: string; source: "codex_sessions"; initial?: boolean };
 
@@ -46,6 +53,7 @@ export class CodexSessionsWatcher {
   private currentFile: string | undefined;
   private currentFileCwd: string | undefined;
   private activeConversationId = "";
+  private readonly lastSessionActionById = new Map<string, "ouverture" | "fermeture">();
   private codexLogFile: string | undefined;
   private codexLogPos = 0;
   private readonly startedAt = Date.now();
@@ -97,6 +105,39 @@ export class CodexSessionsWatcher {
     return path.join(home, ".codex", "sessions");
   }
 
+  private codexRoot(): string {
+    const home =
+      process.env.USERPROFILE ||
+      process.env.HOME ||
+      process.env.HOMEPATH ||
+      "";
+    return path.join(home, ".codex");
+  }
+
+  private async readConversationName(conversationId: string): Promise<string | undefined> {
+    if (!conversationId) return undefined;
+    const indexPath = path.join(this.codexRoot(), "session_index.jsonl");
+    try {
+      const raw = await fsp.readFile(indexPath, "utf8");
+      let found: string | undefined;
+      for (const line of raw.split(/\r?\n/g)) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          const obj = JSON.parse(trimmed) as Record<string, unknown>;
+          if (obj.id === conversationId && typeof obj.thread_name === "string") {
+            found = obj.thread_name;
+          }
+        } catch {
+          // ignore
+        }
+      }
+      return found;
+    } catch {
+      return undefined;
+    }
+  }
+
   private vscodeLogsRoot(): string {
     const appData = process.env.APPDATA || "";
     if (appData) return path.join(appData, "Code", "logs");
@@ -126,10 +167,6 @@ export class CodexSessionsWatcher {
         const st = await fsp.stat(file);
         const summary = await this.readRolloutSummary(file);
         const ts = st.mtimeMs ?? summary.last?.ts ?? 0;
-        if (this.opts.workspaceRoot && !summary.last && !this.matchesWorkspace(summary.cwd)) {
-          // No matching context/message for this workspace, skip.
-          continue;
-        }
         if (!best || ts >= best.ts) {
           best = { file, last: summary.last, ts };
         }
@@ -186,7 +223,9 @@ export class CodexSessionsWatcher {
   }
 
   private parseConversationResume(line: string, allowOld: boolean): string | undefined {
-    const match = /maybe_resume_success conversationId=([0-9a-f-]+)/i.exec(line);
+    // Seules la création et la reprise explicites changent la conversation active :
+    // turn/started et thread/status/changed concernent aussi les threads en arrière-plan.
+    const match = /(?:maybe_resume_success|Conversation created) conversationId=([0-9a-f-]+)/i.exec(line);
     if (!match) return undefined;
     if (!allowOld) {
       const ts = this.parseCodexLogTimestamp(line);
@@ -194,6 +233,37 @@ export class CodexSessionsWatcher {
       if (!ts || ts < minTs) return undefined;
     }
     return match[1];
+  }
+
+  private parseThreadClosed(line: string, allowOld: boolean): string | undefined {
+    const match =
+      /(?:thread\/closed|method=thread\/closed|thread closed).*?(?:threadId|conversationId)=([0-9a-f-]+)/i.exec(line) ||
+      /(?:thread\/closed|method=thread\/closed|thread closed).*?(?:threadId|conversationId)["=: ]+["']?([0-9a-f-]+)/i.exec(line) ||
+      /(?:threadId|conversationId)=([0-9a-f-]+).*?(?:thread\/closed|method=thread\/closed|thread closed)/i.exec(line) ||
+      /(?:threadId|conversationId)["=: ]+["']?([0-9a-f-]+).*?(?:thread\/closed|method=thread\/closed|thread closed)/i.exec(line) ||
+      /thread\/status\/changed.*?(?:threadId|conversationId)["=: ]+["']?([0-9a-f-]+).*?(?:"type"\s*:\s*"notLoaded"|type=notLoaded)/i.exec(line) ||
+      /(?:threadId|conversationId)["=: ]+["']?([0-9a-f-]+).*?thread\/status\/changed.*?(?:"type"\s*:\s*"notLoaded"|type=notLoaded)/i.exec(line);
+    if (!match) return undefined;
+    if (!allowOld) {
+      const ts = this.parseCodexLogTimestamp(line);
+      const minTs = Math.max(this.startedAt - 5_000, Date.now() - this.opts.codexLogRecentMs);
+      if (!ts || ts < minTs) return undefined;
+    }
+    return match[1];
+  }
+
+  private async emitSessionEvent(action: "ouverture" | "fermeture", id: string): Promise<void> {
+    if (!id) return;
+    if (this.lastSessionActionById.get(id) === action) return;
+    this.lastSessionActionById.set(id, action);
+    const name = await this.readConversationName(id);
+    this.onEvent({
+      type: "codex_session",
+      action,
+      id,
+      name,
+      source: "codex_app_server",
+    });
   }
 
   private async updateActiveConversationFromCodexLog(): Promise<void> {
@@ -227,14 +297,28 @@ export class CodexSessionsWatcher {
       await fd.read(buf, 0, buf.length, start);
       const text = buf.toString("utf8");
       for (const line of text.split(/\r?\n/g)) {
+        const closedId = this.parseThreadClosed(line, !isFirstRead);
+        if (closedId) {
+          if (closedId === this.activeConversationId) {
+            this.activeConversationId = "";
+            this.currentFile = undefined;
+            this.currentFileCwd = undefined;
+            this.pos = 0;
+            this.lastEmittedKey = "";
+          }
+          await this.emitSessionEvent("fermeture", closedId);
+        }
         const id = this.parseConversationResume(line, !isFirstRead);
         if (id && id !== this.activeConversationId) {
+          const previousId = this.activeConversationId;
+          if (previousId) await this.emitSessionEvent("fermeture", previousId);
           this.activeConversationId = id;
           this.currentFile = undefined;
           this.currentFileCwd = undefined;
           this.pos = 0;
           this.lastEmittedKey = "";
           this.onEvent({ type: "log", message: `[sessions] conversation Codex active: ${id}` });
+          await this.emitSessionEvent("ouverture", id);
         }
       }
     } finally {
@@ -308,7 +392,6 @@ export class CodexSessionsWatcher {
             }
             const res = this.extractAssistantText(obj);
             if (res) {
-              if (!this.matchesWorkspace(currentCwd)) continue;
               const ts = this.parseTimestamp(obj) ?? st.mtimeMs ?? 0;
               last = { text: res.text, key: res.key, ts, cwd: currentCwd };
             }
@@ -397,6 +480,10 @@ export class CodexSessionsWatcher {
 
     const latest = await this.findActiveRollout(this.activeConversationId);
     if (!latest) return;
+    // Codex.log est choisi parmi toutes les fenêtres VS Code : ignorer une conversation
+    // d'un autre espace de travail. Sans cwd connu (conversation neuve), on l'accepte.
+    const latestCwd = latest.last?.cwd ?? latest.cwd;
+    if (latestCwd && !this.matchesWorkspace(latestCwd)) return;
 
     if (latest.file !== this.currentFile) {
       this.currentFile = latest.file;
@@ -468,7 +555,6 @@ export class CodexSessionsWatcher {
               }
               const res = this.extractAssistantText(obj);
               if (res && res.key !== this.lastEmittedKey) {
-                if (!this.matchesWorkspace(this.currentFileCwd)) continue;
                 this.lastEmittedKey = res.key;
                 this.onEvent({ type: "message", text: res.text, key: res.key, source: "codex_sessions" });
               }

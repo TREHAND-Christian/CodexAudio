@@ -462,6 +462,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   function onWatcherEvent(evt: SessionsWatcherEvent): void {
+    if (evt.type === "codex_session") {
+      const label = evt.name && evt.name.trim() ? evt.name.trim() : evt.id;
+      const line = `[sessions] ${label} (${evt.id}) > ${evt.action}`;
+      output.appendLine(line);
+      if (!runtime.backendOk) return;
+      void backend
+        .request("append_session_event", {
+          action: evt.action,
+          id: evt.id,
+          name: evt.name || "",
+        })
+        .catch(() => {
+          // ignore
+        });
+      return;
+    }
     if (evt.type === "loaded") {
       void onNewAssistantMessage(evt.text, true, false);
       return;
@@ -482,6 +498,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
 
     runtime.lastSourceText = text;
+    const windowBodyText = cleanTextWindowContent(text);
 
     const wantsAutoRead =
       allowSpeak &&
@@ -501,7 +518,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     let res: any;
     try {
       res = await backend.request("process", {
-        text,
+        text: windowBodyText,
         target_lang: runtime.state.targetLang,
         translate_enabled: runtime.state.translateEnabled,
         voice_id: runtime.state.ttsVoiceId,
@@ -511,13 +528,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
 
-    const displayText = String(res?.display_text ?? text);
+    const displayBodyText = String(res?.display_text ?? windowBodyText);
     const label = String(res?.label ?? runtime.state.targetLang);
     const detected = String(res?.detected_lang ?? "?");
     const effective = String(res?.effective_lang ?? runtime.state.targetLang);
+    const displayText = prefixLastResponse(displayBodyText, effective);
     const chosenVoice = String(res?.voice_id ?? runtime.state.ttsVoiceId);
     const queue = Array.isArray(res?.queue) ? (res.queue as string[]) : [];
-    const normalizedQueue = normalizeQueue(queue, displayText);
+    const normalizedQueue = normalizeQueue(queue, displayBodyText);
     const shouldSpeakThisResponse = wantsAutoRead && !!chosenVoice && normalizedQueue.length > 0;
 
     runtime.lastDetectedLang = detected || runtime.lastDetectedLang;
@@ -681,20 +699,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         await ensureBackend();
         if (runtime.backendOk) {
           try {
+            const windowBodyText = cleanTextWindowContent(runtime.lastSourceText);
             const res = await backend.request<ProcessResult>("process", {
-              text: runtime.lastSourceText,
+              text: windowBodyText,
               target_lang: runtime.state.targetLang,
               translate_enabled: runtime.state.translateEnabled,
               voice_id: runtime.state.ttsVoiceId,
               tts_lang: runtime.state.translateEnabled ? runtime.state.targetLang : "",
             });
-            const displayText = String(res?.display_text ?? runtime.lastSourceText);
+            const displayBodyText = String(res?.display_text ?? windowBodyText);
             const label = String(res?.label ?? runtime.state.targetLang);
             const detected = String(res?.detected_lang ?? "?");
             const effective = String(res?.effective_lang ?? runtime.state.targetLang);
+            const displayText = prefixLastResponse(displayBodyText, effective);
             const chosenVoice = String(res?.voice_id ?? runtime.state.ttsVoiceId);
             const queue = Array.isArray(res?.queue) ? (res.queue as string[]) : [];
-            const normalizedQueue = normalizeQueue(queue, displayText);
+            const normalizedQueue = normalizeQueue(queue, displayBodyText);
 
             runtime.lastDetectedLang = detected || runtime.lastDetectedLang;
             runtime.lastSpokenLang = effective || runtime.lastSpokenLang;
@@ -1064,6 +1084,55 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   function canSpeakForTarget(): boolean {
     return hasVoiceForTargetLang();
+  }
+
+  const LAST_RESPONSE_PREFIX = /^Derni[eè]re réponse\s*:\s*/i;
+
+  function cleanTextWindowContent(text: string): string {
+    const cleaned = adaptConversationContextPhrase(stripConversationIdBullets(text || "")).trim();
+    return cleaned.replace(LAST_RESPONSE_PREFIX, "").trim();
+  }
+
+  function prefixLastResponse(text: string, lang: string): string {
+    const cleaned = String(text || "").trim();
+    if (!cleaned) return "";
+    // Le libellé est en français : ne pas l'ajouter à un texte traduit dans une autre langue.
+    if (baseLang(lang) !== "fr" || LAST_RESPONSE_PREFIX.test(cleaned)) return cleaned;
+    return `Dernière réponse :\n\n${cleaned}`;
+  }
+
+  function stripConversationIdBullets(text: string): string {
+    const idLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const lines = (text || "").split(/\r?\n/g);
+    const kept = lines.filter((line) => {
+      const m = /^\s*(?:[-*+]|\d+[.)])\s+(.+?)\s*$/.exec(line);
+      if (!m) return true;
+      return !idLike.test(m[1]);
+    });
+    return kept.join("\n").replace(/\n{3,}/g, "\n\n");
+  }
+
+  function adaptConversationContextPhrase(text: string): string {
+    const phrase = /la\/les conversations disponible\(s\)\s+dans ce contexte est\/sont\s*:/i;
+    const match = phrase.exec(text);
+    if (!match) return text;
+
+    // Compter uniquement les puces de la liste qui suit la phrase.
+    const end = match.index + match[0].length;
+    let bulletCount = 0;
+    for (const line of text.slice(end).split(/\r?\n/g).slice(1)) {
+      if (!line.trim()) {
+        if (bulletCount > 0) break;
+        continue;
+      }
+      if (!/^\s*(?:[-*+]|\d+[.)])\s+\S+/.test(line)) break;
+      bulletCount++;
+    }
+    const replacement =
+      bulletCount <= 1
+        ? "la conversation disponible dans ce contexte est :"
+        : "les conversations disponibles dans ce contexte sont :";
+    return text.slice(0, match.index) + replacement + text.slice(end);
   }
 
   function normalizeQueue(queue: string[], fallbackText: string): string[] {

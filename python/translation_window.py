@@ -87,6 +87,8 @@ class _ChatWebPage(QWebEnginePage if QWebEnginePage is not None else object):
 
 
 class TranslationWindow(QWidget):
+    _SESSION_EVENTS_SHOWN = 5
+
     def __init__(
         self,
         on_ui_cmd=None,
@@ -108,6 +110,7 @@ class TranslationWindow(QWidget):
         self._last_text = ""
         self._last_label = ""
         self._queue: list[str] = []
+        self._session_events: list[dict[str, str]] = []
         self._web_ready = False
         self._on_ui_cmd = on_ui_cmd
         self._on_focus = on_focus
@@ -247,6 +250,26 @@ class TranslationWindow(QWidget):
                     self._wait_for_fresh = False
             if not self._wait_for_fresh:
                 self._render()
+
+    def append_session_event(self, action: str, session_id: str, name: str = "") -> None:
+        action = (action or "").strip()
+        session_id = (session_id or "").strip()
+        name = (name or "").strip()
+        if not session_id or not action:
+            return
+        self._session_events.append(
+            {
+                "action": action,
+                "id": session_id,
+                "name": name,
+            }
+        )
+        self._session_events = self._session_events[-30:]
+        self._pending_seq += 1
+        if not self._last_label:
+            self.setWindowTitle("Fenêtre texte - Sessions Codex")
+        if self._visible and not self._wait_for_fresh:
+            self._render()
 
     def moveEvent(self, event) -> None:  # type: ignore[override]
         try:
@@ -790,6 +813,18 @@ class TranslationWindow(QWidget):
 
     def _render(self) -> None:
         text = self._last_text or ""
+        if self._session_events:
+            event_lines = ["## Sessions Codex"]
+            for event in self._session_events[-self._SESSION_EVENTS_SHOWN:]:
+                # Une conversation neuve n'a pas encore de nom : afficher son ID.
+                title = event.get("name") or event.get("id") or ""
+                action = event.get("action") or ""
+                event_lines.append(f"- {title} > {action}")
+            if text.strip():
+                if len(event_lines) > 1:
+                    text = "\n".join(event_lines) + "\n\n---\n\n" + text
+            else:
+                text = "\n".join(event_lines) if len(event_lines) > 1 else ""
         html_body = self._to_html(text)
         html_body = self._wrap_code_blocks(html_body)
         html_body = self._normalize_bullets(html_body)

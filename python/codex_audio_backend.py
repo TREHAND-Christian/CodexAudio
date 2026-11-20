@@ -1274,6 +1274,14 @@ def main() -> int:
                 queue = [str(x) for x in queue]
                 translation.set_translation(text=text, label=label, queue=queue, is_initial=is_initial)
                 _response(req_id, True, {"ok": True})
+            elif method == "append_session_event":
+                if not isinstance(params, dict):
+                    params = {}
+                action = str(params.get("action") or "")
+                session_id = str(params.get("id") or "")
+                name = str(params.get("name") or "")
+                translation.append_session_event(action=action, session_id=session_id, name=name)
+                _response(req_id, True, {"ok": True})
             elif method == "show_translation":
                 if not isinstance(params, dict):
                     params = {}
