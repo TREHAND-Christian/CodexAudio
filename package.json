@@ -1,7 +1,7 @@
 {
   "name": "codexaudio",
   "displayName": "CodexAudio",
-  "version": "0.0.37",
+  "version": "0.0.41",
   "description": "Lit à voix haute les réponses Codex (sessions .jsonl), avec options et traduction.",
   "icon": "assets/CAC-logo.png",
   "main": "./dist/extension.js",
@@ -117,8 +117,8 @@
         },
         "codexAudio.scrubTtsFields": {
           "type": "boolean",
-          "default": true,
-          "description": "Nettoie les champs TTS dans les JSONL (best-effort)."
+          "default": false,
+          "description": "Nettoie les champs TTS dans les JSONL Codex (réécrit les fichiers de session, déconseillé)."
         }
       }
     }

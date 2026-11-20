@@ -92,6 +92,13 @@ export class OptionsViewProvider implements vscode.WebviewViewProvider {
         <span id="lblAutoRead">Lecture automatique des nouvelles réponses</span>
       </label>
       <label class="row">
+        <span id="lblSource">Source lue :</span>
+        <select id="source">
+          <option value="claude">Claude Code</option>
+          <option value="codex">Codex</option>
+        </select>
+      </label>
+      <label class="row">
         <span id="lblVoice">Voix :</span>
         <select id="voice"></select>
       </label>

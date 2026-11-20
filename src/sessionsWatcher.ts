@@ -50,6 +50,8 @@ export class CodexSessionsWatcher {
   private readonly opts: SessionsWatcherOptions;
 
   private timer: NodeJS.Timeout | undefined;
+  private ticking = false;
+  private rolloutCache: { id: string; checkedAt: number; file: string } | undefined;
   private currentFile: string | undefined;
   private currentFileCwd: string | undefined;
   private activeConversationId = "";
@@ -83,10 +85,18 @@ export class CodexSessionsWatcher {
   start(): void {
     this.stop();
     this.onEvent({ type: "log", message: "[sessions] watcher démarré" });
-    this.tick().catch(() => {});
-    this.timer = setInterval(() => {
-      this.tick().catch(() => {});
-    }, this.opts.pollIntervalMs);
+    const run = () => {
+      // Verrou : jamais deux ticks en parallèle (évite doubles lectures et positions incohérentes).
+      if (this.ticking) return;
+      this.ticking = true;
+      this.tick()
+        .catch(() => {})
+        .finally(() => {
+          this.ticking = false;
+        });
+    };
+    run();
+    this.timer = setInterval(run, this.opts.pollIntervalMs);
   }
 
   stop(): void {
@@ -161,15 +171,13 @@ export class CodexSessionsWatcher {
       suppressErrors: true,
     });
     if (files.length === 0) return undefined;
-    let best: { file: string; last?: AssistantHit; ts: number } | undefined;
+    // Choisir le fichier le plus récent par mtime, puis ne lire le résumé qu'une seule fois.
+    let best: { file: string; ts: number } | undefined;
     for (const file of files) {
       try {
         const st = await fsp.stat(file);
-        const summary = await this.readRolloutSummary(file);
-        const ts = st.mtimeMs ?? summary.last?.ts ?? 0;
-        if (!best || ts >= best.ts) {
-          best = { file, last: summary.last, ts };
-        }
+        const ts = st.mtimeMs ?? 0;
+        if (!best || ts >= best.ts) best = { file, ts };
       } catch {
         // ignore
       }
@@ -306,19 +314,19 @@ export class CodexSessionsWatcher {
             this.pos = 0;
             this.lastEmittedKey = "";
           }
-          await this.emitSessionEvent("fermeture", closedId);
+          if (!isFirstRead) await this.emitSessionEvent("fermeture", closedId);
         }
         const id = this.parseConversationResume(line, !isFirstRead);
         if (id && id !== this.activeConversationId) {
           const previousId = this.activeConversationId;
-          if (previousId) await this.emitSessionEvent("fermeture", previousId);
+          if (previousId && !isFirstRead) await this.emitSessionEvent("fermeture", previousId);
           this.activeConversationId = id;
           this.currentFile = undefined;
           this.currentFileCwd = undefined;
           this.pos = 0;
           this.lastEmittedKey = "";
           this.onEvent({ type: "log", message: `[sessions] conversation Codex active: ${id}` });
-          await this.emitSessionEvent("ouverture", id);
+          if (!isFirstRead) await this.emitSessionEvent("ouverture", id);
         }
       }
     } finally {
@@ -478,7 +486,23 @@ export class CodexSessionsWatcher {
     await this.updateActiveConversationFromCodexLog();
     if (!this.activeConversationId) return;
 
-    const latest = await this.findActiveRollout(this.activeConversationId);
+    // Fichier déjà résolu pour cette conversation : on évite le glob + la relecture de 2 Mo à chaque tick.
+    let latest: LatestRollout | undefined;
+    const cache = this.rolloutCache;
+    if (
+      this.currentFile &&
+      cache &&
+      cache.id === this.activeConversationId &&
+      cache.file === this.currentFile &&
+      Date.now() - cache.checkedAt < 5000
+    ) {
+      latest = { file: this.currentFile, cwd: this.currentFileCwd };
+    } else {
+      latest = await this.findActiveRollout(this.activeConversationId);
+      if (latest) {
+        this.rolloutCache = { id: this.activeConversationId, checkedAt: Date.now(), file: latest.file };
+      }
+    }
     if (!latest) return;
     // Codex.log est choisi parmi toutes les fenêtres VS Code : ignorer une conversation
     // d'un autre espace de travail. Sans cwd connu (conversation neuve), on l'accepte.

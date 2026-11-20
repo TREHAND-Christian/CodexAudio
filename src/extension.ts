@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { CodexSessionsWatcher, type SessionsWatcherEvent } from "./sessionsWatcher";
+import { ClaudeSessionsWatcher } from "./claudeSessionsWatcher";
 import { PythonBackendClient, type BackendEvent, type BackendLaunch } from "./pythonClient";
 import { loadState, saveState, type AppState } from "./state";
 import { OptionsViewProvider, type OptionsViewModel } from "./views/optionsView";
@@ -25,6 +26,7 @@ type ProcessResult = {
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const output = vscode.window.createOutputChannel("CodexAudio");
+  const activatedAt = Date.now();
   // Delay startup a bit so Codex session metadata (cwd) is ready.
   await new Promise((resolve) => setTimeout(resolve, 1500));
   const state = await loadState(context);
@@ -99,12 +101,30 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const watcher = new CodexSessionsWatcher((evt) => onWatcherEvent(evt), {
     pollIntervalMs: getCfgNumber("pollIntervalMs", 500),
     readLastOnStart: false,
-    scrubTtsFields: getCfgBool("scrubTtsFields", true),
+    scrubTtsFields: getCfgBool("scrubTtsFields", false),
     workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "",
     codexLogFile: resolveCodexLogFile(),
   });
   watcher.start();
   context.subscriptions.push({ dispose: () => watcher.stop() });
+
+  // Session Claude Code en cours : lecture auto des nouvelles réponses.
+  const claudeWatcher = new ClaudeSessionsWatcher(
+    (evt) => {
+      if (evt.type === "log") {
+        output.appendLine(evt.message);
+        return;
+      }
+      if (getCfgSource() !== "claude") return;
+      void onNewAssistantMessage(evt.text, false, true);
+    },
+    {
+      pollIntervalMs: getCfgNumber("pollIntervalMs", 500),
+      workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "",
+    },
+  );
+  claudeWatcher.start();
+  context.subscriptions.push({ dispose: () => claudeWatcher.stop() });
 
   await startBackend();
   await refreshBackendInfo();
@@ -483,6 +503,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     if (evt.type === "message") {
+      if (getCfgSource() !== "codex") return;
       void onNewAssistantMessage(evt.text, evt.initial === true, true);
       return;
     }
@@ -500,8 +521,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     runtime.lastSourceText = text;
     const windowBodyText = cleanTextWindowContent(text);
 
+    // Pas de lecture auto pendant les premières secondes après le chargement de l'extension.
+    const startupGraceOver = Date.now() - activatedAt > 8000;
     const wantsAutoRead =
       allowSpeak &&
+      startupGraceOver &&
       runtime.state.autoReadNewResponses &&
       runtime.state.ttsEnabled &&
       !runtime.state.ttsMute &&
@@ -959,7 +983,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       state: runtime.state,
       voices: runtime.voices,
       availableLanguages: runtime.availableLanguages,
-      statusText: text,
+      statusText: `Version: ${String(context.extension.packageJSON.version)}`,
       detectedLang: runtime.lastDetectedLang,
       backendOk: runtime.backendOk,
       translateAvailable: runtime.translateAvailable,
@@ -972,6 +996,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
   function getCfgNumber(key: string, def: number): number {
     return vscode.workspace.getConfiguration("codexAudio").get<number>(key, def);
+  }
+  function getCfgSource(): "claude" | "codex" {
+    return runtime.state.source === "codex" ? "codex" : "claude";
   }
   function getCfgBool(key: string, def: boolean): boolean {
     return vscode.workspace.getConfiguration("codexAudio").get<boolean>(key, def);

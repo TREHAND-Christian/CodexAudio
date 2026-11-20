@@ -7,6 +7,7 @@ export type AppState = {
   uiLang: string;
   uiAnnouncementsEnabled: boolean;
   autoReadNewResponses: boolean;
+  source: "claude" | "codex";
   miniBarVisible: boolean;
   showMiniBarOnStart: boolean;
   showTranslationWindow: boolean;
@@ -30,6 +31,7 @@ export const DEFAULT_STATE: AppState = {
   uiLang: "fr",
   uiAnnouncementsEnabled: true,
   autoReadNewResponses: true,
+  source: "claude",
   miniBarVisible: true,
   showMiniBarOnStart: true,
   showTranslationWindow: true,

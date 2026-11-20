@@ -253,6 +253,7 @@
   const uiLangSelect = byId("uiLangSelect");
   const uiAnnouncements = byId("uiAnnouncements");
   const autoRead = byId("autoRead");
+  const sourceSelect = byId("source");
   const barTop = byId("barTop");
   const barStart = byId("barStart");
   const showText = byId("showText");
@@ -297,6 +298,7 @@
     );
     uiAnnouncements.checked = !!s.uiAnnouncementsEnabled;
     autoRead.checked = !!s.autoReadNewResponses;
+    sourceSelect.value = s.source === "codex" ? "codex" : "claude";
     barTop.checked = !!s.miniBarVisible;
     barStart.checked = !!s.showMiniBarOnStart;
     showText.checked = !!s.showTranslationWindow;
@@ -547,6 +549,7 @@
   }
 
   // uiLang handled by custom dropdown
+  sourceSelect.addEventListener("change", () => postPatch({ source: sourceSelect.value === "codex" ? "codex" : "claude" }));
   autoRead.addEventListener("change", () => postPatchWithAnnounce({ autoReadNewResponses: autoRead.checked }, "auto_read", true));
   uiAnnouncements.addEventListener("change", () =>
     postPatchWithAnnounce({ uiAnnouncementsEnabled: uiAnnouncements.checked }, "ui_announcements", true),

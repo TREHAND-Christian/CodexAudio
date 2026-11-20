@@ -78,9 +78,9 @@ except Exception:  # pragma: no cover
     HtmlFormatter = None
 
 try:
-    from PySide6.QtCore import Qt, QTimer, QEvent
+    from PySide6.QtCore import Qt, QTimer, QEvent, QPointF, QRectF, QSize
     from PySide6.QtGui import QDesktopServices
-    from PySide6.QtGui import QColor, QPainter, QPainterPath, QIcon
+    from PySide6.QtGui import QColor, QPainter, QPainterPath, QIcon, QPixmap, QPen, QPolygonF
     from PySide6.QtWidgets import (
         QApplication,
         QWidget,
@@ -99,6 +99,12 @@ except Exception:  # pragma: no cover
     QPainter = None
     QPainterPath = None
     QIcon = None
+    QPointF = None
+    QRectF = None
+    QSize = None
+    QPixmap = None
+    QPen = None
+    QPolygonF = None
     QApplication = None
     QWidget = None
     QHBoxLayout = None
@@ -823,6 +829,79 @@ class Processor:
 
 
 
+def _make_icon(kind: str, color: tuple = (55, 55, 55), accent: tuple = (196, 58, 58)):
+    """Dessine une icône vectorielle 24x24 (rendue à 2x pour les écrans HiDPI)."""
+    if QPixmap is None or QPainter is None:
+        return None
+    ratio = 2
+    pm = QPixmap(24 * ratio, 24 * ratio)
+    pm.setDevicePixelRatio(ratio)
+    pm.fill(Qt.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.Antialiasing, True)
+    main = QColor(*color)
+    pen = QPen(main, 1.8)
+    pen.setCapStyle(Qt.RoundCap)
+    pen.setJoinStyle(Qt.RoundJoin)
+    p.setPen(Qt.NoPen)
+    p.setBrush(main)
+
+    def speaker():
+        p.setPen(Qt.NoPen)
+        p.setBrush(main)
+        p.drawPolygon(
+            QPolygonF(
+                [QPointF(3.5, 9), QPointF(7.5, 9), QPointF(12.5, 4.5), QPointF(12.5, 19.5), QPointF(7.5, 15), QPointF(3.5, 15)]
+            )
+        )
+
+    if kind == "play":
+        p.drawPolygon(QPolygonF([QPointF(7, 4.5), QPointF(19.5, 12), QPointF(7, 19.5)]))
+    elif kind == "pause":
+        p.drawRoundedRect(QRectF(6, 5, 4, 14), 1.2, 1.2)
+        p.drawRoundedRect(QRectF(14, 5, 4, 14), 1.2, 1.2)
+    elif kind == "stop":
+        p.drawRoundedRect(QRectF(6, 6, 12, 12), 2, 2)
+    elif kind == "volume":
+        speaker()
+        p.setPen(pen)
+        p.setBrush(Qt.NoBrush)
+        p.drawArc(QRectF(9, 8, 8, 8), -50 * 16, 100 * 16)
+        p.drawArc(QRectF(7, 4.5, 14, 15), -50 * 16, 100 * 16)
+    elif kind == "muted":
+        speaker()
+        xpen = QPen(QColor(*accent), 2.0)
+        xpen.setCapStyle(Qt.RoundCap)
+        p.setPen(xpen)
+        p.drawLine(QPointF(15.5, 9), QPointF(21, 15))
+        p.drawLine(QPointF(21, 9), QPointF(15.5, 15))
+    elif kind == "window":
+        p.setPen(pen)
+        p.setBrush(Qt.NoBrush)
+        p.drawRoundedRect(QRectF(3.5, 4.5, 17, 15), 2.5, 2.5)
+        p.drawLine(QPointF(3.5, 9), QPointF(20.5, 9))
+        p.drawLine(QPointF(7, 12.5), QPointF(17, 12.5))
+        p.drawLine(QPointF(7, 15.8), QPointF(14, 15.8))
+    elif kind == "gear":
+        p.translate(12, 12)
+        for _ in range(8):
+            p.drawRoundedRect(QRectF(-1.7, -10, 3.4, 5), 0.8, 0.8)
+            p.rotate(45)
+        p.drawEllipse(QPointF(0, 0), 6.8, 6.8)
+        p.setCompositionMode(QPainter.CompositionMode_Clear)
+        p.drawEllipse(QPointF(0, 0), 2.8, 2.8)
+    p.end()
+    return QIcon(pm)
+
+
+_MINIBAR_STYLE = """
+QPushButton { border: none; border-radius: 6px; background: transparent; }
+QPushButton:hover { background: rgba(0, 0, 0, 38); }
+QPushButton:pressed { background: rgba(0, 0, 0, 70); }
+QToolTip { color: #f2f2f2; background-color: #2b2b2b; border: 1px solid #555; padding: 4px 6px; }
+"""
+
+
 class MiniBar(QWidget):
     def __init__(self, on_ui_cmd):
         super().__init__()
@@ -844,16 +923,32 @@ class MiniBar(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setFixedHeight(36)
 
-        self.btn_play = QPushButton("⏯")
-        self.btn_stop = QPushButton("⏹")
-        self.btn_mute = QPushButton("🔇")
-        self.btn_opts = QPushButton("⚙")
-        self.btn_text = QPushButton("🪟")
+        self.btn_play = QPushButton()
+        self.btn_stop = QPushButton()
+        self.btn_mute = QPushButton()
+        self.btn_opts = QPushButton()
+        self.btn_text = QPushButton()
 
+        self.setStyleSheet(_MINIBAR_STYLE)
         for b in [self.btn_play, self.btn_stop, self.btn_mute, self.btn_opts, self.btn_text]:
             b.setFixedSize(34, 28)
             b.setFlat(True)
+            b.setCursor(Qt.PointingHandCursor)
+            b.setFocusPolicy(Qt.NoFocus)
+            if QSize is not None:
+                b.setIconSize(QSize(20, 20))
             b.installEventFilter(self)
+
+        self._icons = {
+            k: _make_icon(k) for k in ("play", "pause", "stop", "volume", "muted", "window", "gear")
+        }
+        self.btn_stop.setIcon(self._icons["stop"] or QIcon())
+        self.btn_text.setIcon(self._icons["window"] or QIcon())
+        self.btn_opts.setIcon(self._icons["gear"] or QIcon())
+        self.btn_stop.setToolTip("Arrêter la lecture")
+        self.btn_text.setToolTip("Ouvrir la fenêtre de traduction")
+        self.btn_opts.setToolTip("Ouvrir les options")
+        self._refresh_buttons()
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(6, 4, 6, 4)
@@ -1003,7 +1098,18 @@ class MiniBar(QWidget):
         self._app_paused = bool(app_paused)
         self._muted = bool(muted)
         self._playing = bool(playing)
+        self._refresh_buttons()
         self.update()
+
+    def _refresh_buttons(self) -> None:
+        play_icon = self._icons.get("pause" if self._playing else "play")
+        mute_icon = self._icons.get("muted" if self._muted else "volume")
+        if play_icon is not None:
+            self.btn_play.setIcon(play_icon)
+        if mute_icon is not None:
+            self.btn_mute.setIcon(mute_icon)
+        self.btn_play.setToolTip("Mettre en pause la lecture" if self._playing else "Lire / reprendre la lecture")
+        self.btn_mute.setToolTip("Réactiver le son" if self._muted else "Couper le son (muet)")
 
     def paintEvent(self, event):
         painter = QPainter(self)
