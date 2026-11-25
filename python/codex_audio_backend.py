@@ -902,6 +902,62 @@ QToolTip { color: #f2f2f2; background-color: #2b2b2b; border: 1px solid #555; pa
 """
 
 
+class _FocusTracker:
+    """Barre active seulement quand VS Code est au premier plan, grisee dans toute autre appli.
+
+    Nos propres fenetres (barre, traduction) ou l'absence de fenetre gardent l'etat precedent,
+    pour que cliquer sur la barre ne la grise pas.
+    """
+
+    ACTIVE_EXES = frozenset({"code.exe", "code - insiders.exe"})
+
+    def __init__(self) -> None:
+        self.active = True
+        self._own_pid = os.getpid()
+        self._last_pid = None
+
+    @staticmethod
+    def _foreground_pid() -> int:
+        user32 = ctypes.windll.user32
+        user32.GetForegroundWindow.restype = wintypes.HWND
+        hwnd = user32.GetForegroundWindow()
+        if not hwnd:
+            return 0
+        pid = wintypes.DWORD(0)
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        return int(pid.value)
+
+    @staticmethod
+    def _exe_name(pid: int) -> str:
+        kernel32 = ctypes.windll.kernel32
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        h = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return ""
+        try:
+            buf = ctypes.create_unicode_buffer(1024)
+            size = wintypes.DWORD(1024)
+            if kernel32.QueryFullProcessImageNameW(wintypes.HANDLE(h), 0, buf, ctypes.byref(size)):
+                return os.path.basename(buf.value).lower()
+        finally:
+            kernel32.CloseHandle(wintypes.HANDLE(h))
+        return ""
+
+    def update(self) -> bool:
+        if sys.platform != "win32":
+            return self.active
+        try:
+            pid = self._foreground_pid()
+            if not pid or pid == self._own_pid or pid == self._last_pid:
+                return self.active
+            self._last_pid = pid
+            name = self._exe_name(pid)
+        except Exception:
+            return self.active
+        self.active = name in self.ACTIVE_EXES
+        return self.active
+
+
 class MiniBar(QWidget):
     def __init__(self, on_ui_cmd):
         super().__init__()
@@ -915,6 +971,10 @@ class MiniBar(QWidget):
         self._drag_start_pos = None
         self._drag_pressed_button = None
         self._drag_moved = False
+        # Grisee hors de VS Code (dans Claude Desktop, c'est la barre SpeakToFR qui sert)
+        self._dimmed = False
+        self._hover = False
+        self._focus = _FocusTracker()
 
         self.setWindowTitle("CodexAudio")
         self.setWindowFlag(Qt.FramelessWindowHint, True)
@@ -939,12 +999,10 @@ class MiniBar(QWidget):
                 b.setIconSize(QSize(20, 20))
             b.installEventFilter(self)
 
-        self._icons = {
-            k: _make_icon(k) for k in ("play", "pause", "stop", "volume", "muted", "window", "gear")
-        }
-        self.btn_stop.setIcon(self._icons["stop"] or QIcon())
-        self.btn_text.setIcon(self._icons["window"] or QIcon())
-        self.btn_opts.setIcon(self._icons["gear"] or QIcon())
+        kinds = ("play", "pause", "stop", "volume", "muted", "window", "gear")
+        self._icons_on = {k: _make_icon(k) for k in kinds}
+        self._icons_dim = {k: _make_icon(k, color=(165, 165, 165), accent=(205, 160, 160)) for k in kinds}
+        self._icons = self._icons_on
         self.btn_stop.setToolTip("Arrêter la lecture")
         self.btn_text.setToolTip("Ouvrir la fenêtre de traduction")
         self.btn_opts.setToolTip("Ouvrir les options")
@@ -965,6 +1023,29 @@ class MiniBar(QWidget):
         self.btn_opts.clicked.connect(lambda: self._on_ui_cmd("openOptions"))
         self.btn_text.clicked.connect(lambda: self._on_ui_cmd("openTranslation"))
         self._restore_window_state()
+
+        self._focus_timer = QTimer(self)
+        self._focus_timer.setInterval(300)
+        self._focus_timer.timeout.connect(self._update_dim)
+        self._focus_timer.start()
+
+    def _update_dim(self) -> None:
+        dimmed = (not self._focus.update()) and not self._hover
+        if dimmed != self._dimmed:
+            self._dimmed = dimmed
+            self._refresh_buttons()
+            self.update()
+
+    # La barre grisee reprend ses couleurs au survol (elle reste toujours cliquable)
+    def enterEvent(self, event):
+        self._hover = True
+        self._update_dim()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self._hover = False
+        self._update_dim()
+        super().leaveEvent(event)
 
     def ensure_on_top(self, activate: bool = False) -> None:
         try:
@@ -1102,6 +1183,10 @@ class MiniBar(QWidget):
         self.update()
 
     def _refresh_buttons(self) -> None:
+        self._icons = self._icons_dim if self._dimmed else self._icons_on
+        self.btn_stop.setIcon(self._icons["stop"] or QIcon())
+        self.btn_text.setIcon(self._icons["window"] or QIcon())
+        self.btn_opts.setIcon(self._icons["gear"] or QIcon())
         play_icon = self._icons.get("pause" if self._playing else "play")
         mute_icon = self._icons.get("muted" if self._muted else "volume")
         if play_icon is not None:
@@ -1114,8 +1199,12 @@ class MiniBar(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing, True)
-        border_color = QColor(196, 58, 58) if self._app_paused else QColor(47, 191, 58)
-        bg_color = QColor(230, 230, 230)
+        if self._dimmed:
+            border_color = QColor(206, 160, 160) if self._app_paused else QColor(170, 170, 170)
+            bg_color = QColor(214, 214, 214)
+        else:
+            border_color = QColor(196, 58, 58) if self._app_paused else QColor(47, 191, 58)
+            bg_color = QColor(230, 230, 230)
         border_width = 3
         radius = 8
         rect = self.rect().adjusted(
